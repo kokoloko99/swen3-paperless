@@ -1,9 +1,10 @@
 package at.fhtw.swen3.paperless_rest.dto;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record DocumentDto(
-        Long id,
+        UUID id,
         String filename,
         String contentType,
         long size,

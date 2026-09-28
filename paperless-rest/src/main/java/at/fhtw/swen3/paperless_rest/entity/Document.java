@@ -1,14 +1,14 @@
 package at.fhtw.swen3.paperless_rest.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -17,8 +17,8 @@ import java.time.Instant;
 public class Document {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator
+    private UUID id;
 
     private String filename;
 

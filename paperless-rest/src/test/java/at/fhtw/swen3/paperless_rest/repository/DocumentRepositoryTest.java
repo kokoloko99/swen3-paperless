@@ -11,6 +11,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,7 +46,7 @@ class DocumentRepositoryTest {
 
     @Test
     void returnsEmptyWhenDocumentDoesNotExist() {
-        Optional<Document> found = documentRepository.findById(-1L);
+        Optional<Document> found = documentRepository.findById(UUID.randomUUID());
 
         assertThat(found).isEmpty();
     }
