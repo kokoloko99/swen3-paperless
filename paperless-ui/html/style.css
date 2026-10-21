@@ -1,0 +1,33 @@
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; font: 16px/1.5 Arial, sans-serif; background: #f2f5f9; color: #1d2939; }
+header { display: flex; justify-content: space-between; align-items: center; padding: .8rem max(1.25rem, calc((100% - 1120px)/2)); background: #173f63; color: white; }
+header h1 { margin: 0; font-size: 1.4rem; }
+main { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 1.25rem; max-width: 1120px; margin: 2rem auto; padding: 0 1.25rem; }
+section { min-width: 0; padding: 1.35rem; border: 1px solid #e1e8f0; border-radius: 12px; background: white; box-shadow: 0 5px 18px #172b4210; }
+#app > section:first-child, #message { grid-column: 1 / -1; }
+#app > section:first-child { background: #eaf3fb; }
+h2, h3 { margin: 0 0 1rem; }
+h2 { color: #173f63; font-size: 1.2rem; }
+h3 { margin-top: 1.5rem; font-size: 1rem; }
+form { display: flex; flex-wrap: wrap; gap: .65rem; margin-bottom: .5rem; }
+input[type=text] { flex: 1; min-width: 140px; padding: .7rem .8rem; border: 1px solid #cbd5e1; border-radius: 7px; font: inherit; }
+input[type=file] { flex: 1; min-width: 220px; padding: .45rem; border: 1px dashed #aabbd0; border-radius: 7px; background: #fff; }
+button { padding: .65rem 1rem; border: 0; border-radius: 7px; background: #1e5a88; color: white; font: inherit; cursor: pointer; }
+button:hover { background: #17446d; }
+button.danger { background: #b43a35; }
+ul { list-style: none; padding: 0; margin: 0; }
+li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .65rem .75rem; border-bottom: 1px solid #e8edf3; }
+#document-list li { margin: .35rem 0; border: 1px solid #e8edf3; border-radius: 7px; background: #f8fafc; }
+li a { overflow-wrap: anywhere; color: #1e5a88; cursor: pointer; text-decoration: none; }
+li a:hover { text-decoration: underline; }
+dl { display: grid; grid-template-columns: 105px 1fr; gap: .55rem .8rem; margin: 0; }
+dt { color: #607086; font-weight: bold; }
+dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+#message { min-height: 1.5rem; margin: 0; font-weight: bold; }
+#message.error { color: #b3261e; }
+#message.ok { color: #237447; }
+@media (max-width: 700px) {
+    main { grid-template-columns: 1fr; margin: 1rem auto; }
+    #app > section:first-child, #message { grid-column: auto; }
+}
