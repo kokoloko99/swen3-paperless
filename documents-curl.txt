@@ -1,0 +1,4 @@
+# curl examples (Document Upload)
+# add -H "Authorization: Bearer <access_token>" to every call
+curl -X POST -F "file=@sample.pdf" http://localhost:8080/api/v1/documents
+curl http://localhost:8080/api/v1/documents/<id>

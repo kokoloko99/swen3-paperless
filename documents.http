@@ -1,0 +1,17 @@
+# All requests need a JWT: Authorization: Bearer <access_token> (get one via the UI login, see README)
+### Upload a document (place a file named sample.pdf next to this file)
+POST http://localhost:8080/api/v1/documents
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="sample.pdf"
+Content-Type: application/pdf
+
+< ./sample.pdf
+--boundary--
+
+### Get a document (replace the id with the one returned by the upload)
+GET http://localhost:8080/api/v1/documents/00000000-0000-0000-0000-000000000000
+
+### Get a non-existing document (expects 404)
+GET http://localhost:8080/api/v1/documents/00000000-0000-0000-0000-000000000000
