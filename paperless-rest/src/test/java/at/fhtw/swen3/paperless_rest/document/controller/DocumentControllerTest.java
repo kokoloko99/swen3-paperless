@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @WebMvcTest(DocumentController.class)
 @Import({DocumentDtoMapperImpl.class, SecurityConfig.class, LoggingConfiguration.class})
@@ -60,7 +61,7 @@ class DocumentControllerTest {
     void uploadReturnsCreatedWithDocumentMetadata() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "HelloWorld.pdf", "application/pdf", "content".getBytes());
-        when(documentService.uploadDocument(any())).thenReturn(sampleDocument());
+        when(documentService.uploadDocument(any(), any(byte[].class))).thenReturn(sampleDocument());
 
         mockMvc.perform(multipart("/api/v1/documents").file(file))
                 .andExpect(status().isCreated())
@@ -71,11 +72,49 @@ class DocumentControllerTest {
     @Test
     void uploadReturnsBadRequestWhenDocumentMetadataIsInvalid() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "", "application/pdf", new byte[0]);
-        when(documentService.uploadDocument(any()))
+        when(documentService.uploadDocument(any(), any(byte[].class)))
                 .thenThrow(new InvalidDocumentException("Document filename must not be blank"));
 
         mockMvc.perform(multipart("/api/v1/documents").file(file))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void uploadReturnsServiceUnavailableWhenOcrSubmissionFails() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "scan.pdf", "application/pdf", new byte[]{1});
+        when(documentService.uploadDocument(any(), any(byte[].class)))
+                .thenThrow(new at.fhtw.swen3.paperless_rest.document.exception.OcrSubmissionException(
+                        new RuntimeException("internal broker credentials")));
+
+        mockMvc.perform(multipart("/api/v1/documents").file(file))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string("OCR service unavailable. Please try again later."));
+    }
+
+    @Test
+    void getReturnsServiceUnavailableWithoutDatabaseDetails() throws Exception {
+        when(documentService.getDocument(DOCUMENT_ID))
+                .thenThrow(new at.fhtw.swen3.paperless_rest.common.persistence.PersistenceOperationException(
+                        "internal SQL details", new RuntimeException("database credentials")));
+
+        mockMvc.perform(get("/api/v1/documents/{id}", DOCUMENT_ID))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string("Document storage unavailable. Please try again later."));
+    }
+
+    @Test
+    void uploadReturnsInternalServerErrorWhenFileCannotBeRead() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "scan.pdf", "application/pdf", new byte[]{1}) {
+            @Override
+            public byte[] getBytes() throws java.io.IOException {
+                throw new java.io.IOException("internal disk path");
+            }
+        };
+
+        mockMvc.perform(multipart("/api/v1/documents").file(file))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Could not read the uploaded file."));
+        org.mockito.Mockito.verifyNoInteractions(documentService);
     }
 
     @Test

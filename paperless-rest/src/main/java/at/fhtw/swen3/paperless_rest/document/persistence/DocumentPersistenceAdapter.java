@@ -6,6 +6,8 @@ import at.fhtw.swen3.paperless_rest.document.persistence.repository.DocumentRepo
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Repository;
+import org.springframework.dao.DataAccessException;
+import at.fhtw.swen3.paperless_rest.common.persistence.PersistenceOperationException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -20,22 +22,34 @@ public class DocumentPersistenceAdapter implements DocumentPersistence {
 
     @Override
     public DocumentModel save(DocumentModel document) {
-        DocumentModel saved = documentMapper.toModel(documentRepository.save(documentMapper.toDal(document)));
-        logger.debug("Persisted document {}", saved.getId());
-        return saved;
+        try {
+            DocumentModel saved = documentMapper.toModel(documentRepository.save(documentMapper.toDal(document)));
+            logger.debug("Persisted document {}", saved.getId());
+            return saved;
+        } catch (DataAccessException ex) {
+            throw new PersistenceOperationException("Could not save document", ex);
+        }
     }
 
     @Override
     public Optional<DocumentModel> findById(UUID id) {
-        Optional<DocumentModel> document = documentRepository.findById(id).map(documentMapper::toModel);
-        logger.debug("Document {} found: {}", id, document.isPresent());
-        return document;
+        try {
+            Optional<DocumentModel> document = documentRepository.findById(id).map(documentMapper::toModel);
+            logger.debug("Document {} found: {}", id, document.isPresent());
+            return document;
+        } catch (DataAccessException ex) {
+            throw new PersistenceOperationException("Could not load document", ex);
+        }
     }
 
     @Override
     public boolean existsById(UUID id) {
-        boolean exists = documentRepository.existsById(id);
-        logger.debug("Document {} exists: {}", id, exists);
-        return exists;
+        try {
+            boolean exists = documentRepository.existsById(id);
+            logger.debug("Document {} exists: {}", id, exists);
+            return exists;
+        } catch (DataAccessException ex) {
+            throw new PersistenceOperationException("Could not check document existence", ex);
+        }
     }
 }

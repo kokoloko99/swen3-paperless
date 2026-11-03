@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1/documents")
@@ -30,8 +31,18 @@ public class DocumentController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DocumentDto> upload(@RequestParam("file") MultipartFile file) {
-        logger.info("Uploading document {}", file.getOriginalFilename());
-        DocumentModel saved = documentService.uploadDocument(documentDtoMapper.toModel(file));
+        logger.info("Document upload received: {} ({} bytes, type {})",
+                file.getOriginalFilename(), file.getSize(), file.getContentType());
+        byte[] content;
+        try {
+            content = file.getBytes();
+        } catch (IOException ex) {
+            throw new DocumentReadException(ex);
+        }
+        DocumentModel saved = documentService.uploadDocument(documentDtoMapper.toModel(file), content);
+        // The transactional service proxy has committed before returning here.
+        logger.info("Document upload completed: document {} ({}) stored and submitted for OCR",
+                saved.getId(), saved.getFilename());
         return ResponseEntity.status(HttpStatus.CREATED).body(documentDtoMapper.toDto(saved));
     }
 

@@ -28,6 +28,9 @@ class DocumentServiceTest {
     @Mock
     private DocumentPersistence documentPersistence;
 
+    @Mock
+    private OcrPublisher ocrPublisher;
+
     private DocumentService documentService;
 
     @BeforeEach
@@ -35,6 +38,7 @@ class DocumentServiceTest {
         documentService = new DocumentService(
                 documentPersistence,
                 new DocumentValidator(LoggerFactory.getLogger(DocumentValidator.class)),
+                ocrPublisher,
                 LoggerFactory.getLogger(DocumentService.class));
     }
 
@@ -52,13 +56,14 @@ class DocumentServiceTest {
             return model;
         });
 
-        DocumentModel result = documentService.uploadDocument(toUpload);
+        DocumentModel result = documentService.uploadDocument(toUpload, new byte[]{1, 2, 3});
 
         ArgumentCaptor<DocumentModel> captor = ArgumentCaptor.forClass(DocumentModel.class);
         verify(documentPersistence).save(captor.capture());
         assertThat(captor.getValue().getFilename()).isEqualTo("HelloWorld.pdf");
         assertThat(captor.getValue().getUploadedAt()).isNotNull();
         assertThat(result.getId()).isEqualTo(savedId);
+        verify(ocrPublisher).publish(result, new byte[]{1, 2, 3});
     }
 
     @Test
@@ -68,8 +73,25 @@ class DocumentServiceTest {
         invalid.setContentType("application/pdf");
         invalid.setSize(1L);
 
-        assertThatThrownBy(() -> documentService.uploadDocument(invalid))
+        assertThatThrownBy(() -> documentService.uploadDocument(invalid, new byte[0]))
                 .isInstanceOf(InvalidDocumentException.class);
+        org.mockito.Mockito.verifyNoInteractions(ocrPublisher, documentPersistence);
+    }
+
+    @Test
+    void uploadFailsWhenOcrPublishingFails() {
+        DocumentModel document = new DocumentModel();
+        document.setFilename("scan.pdf");
+        document.setContentType("application/pdf");
+        document.setSize(1);
+        when(documentPersistence.save(any())).thenReturn(document);
+        OcrPublishException failure = new OcrPublishException("Publisher unavailable", new RuntimeException("connection refused"));
+        org.mockito.Mockito.doThrow(failure)
+                .when(ocrPublisher).publish(any(), any(byte[].class));
+
+        assertThatThrownBy(() -> documentService.uploadDocument(document, new byte[]{1}))
+                .isInstanceOf(at.fhtw.swen3.paperless_rest.document.exception.OcrSubmissionException.class)
+                .hasCause(failure);
     }
 
     @Test
