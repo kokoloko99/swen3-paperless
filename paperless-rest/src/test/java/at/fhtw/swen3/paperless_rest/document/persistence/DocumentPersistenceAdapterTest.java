@@ -64,6 +64,16 @@ class DocumentPersistenceAdapterTest {
     }
 
     @Test
+    void translatesDatabaseFailureAndPreservesCause() {
+        var failure = new org.springframework.dao.DataAccessResourceFailureException("Database offline");
+        when(documentRepository.findById(any())).thenThrow(failure);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.findById(UUID.randomUUID()))
+                .isInstanceOf(at.fhtw.swen3.paperless_rest.common.persistence.PersistenceOperationException.class)
+                .hasCause(failure);
+    }
+
+    @Test
     void existsByIdDelegates() {
         UUID id = UUID.randomUUID();
         when(documentRepository.existsById(id)).thenReturn(true);

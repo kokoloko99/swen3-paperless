@@ -88,6 +88,17 @@ class CommentPersistenceAdapterTest {
     }
 
     @Test
+    void translatesDeleteFailureAndPreservesCause() {
+        UUID id = UUID.randomUUID();
+        var failure = new org.springframework.dao.DataAccessResourceFailureException("Database offline");
+        org.mockito.Mockito.doThrow(failure).when(commentRepository).deleteById(id);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> adapter.deleteById(id))
+                .isInstanceOf(at.fhtw.swen3.paperless_rest.common.persistence.PersistenceOperationException.class)
+                .hasCause(failure);
+    }
+
+    @Test
     void deleteByIdDelegates() {
         UUID id = UUID.randomUUID();
 
