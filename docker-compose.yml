@@ -50,6 +50,7 @@ services:
     build: ./paperless-rest
     container_name: paperless-rest
     environment:
+      SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paperless
       SPRING_DATASOURCE_USERNAME: paperless
       SPRING_DATASOURCE_PASSWORD: paperless
