@@ -5,7 +5,7 @@ Semester project for SWEN3 - Document Management System
 
 The backend uses a three-layer, feature-first structure (controller, business, and
 persistence). The persistence ports and adapters keep JPA and repository details out
-of the business layer. See [the architecture documentation](docs/architecture.md).
+of the business layer.
 
 ## Build, deploy and run
 
