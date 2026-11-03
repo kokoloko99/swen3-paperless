@@ -20,6 +20,12 @@ Keycloak admin console: http://localhost:8082/ (`admin` / `admin`). Stop with `d
 
 For development, start PostgreSQL and RabbitMQ (`docker compose up -d postgres rabbitmq`) and run the REST server from the IDE (database on port 5434). Keycloak is also needed for authenticated requests.
 
+The REST server started from the IDE uses port **8083**, while Docker uses
+**8080**. Both can run at the same time without a port conflict. Test the IDE
+instance at `http://localhost:8083/api/v1/documents` (authentication required).
+The frontend at `http://localhost:8081/` continues to use the Docker REST instance;
+changes run only in the IDE must be tested against port 8083 directly.
+
 ## OCR queue (Sprint 3)
 
 For backend development, start both dependencies with `docker compose up -d postgres rabbitmq`.
