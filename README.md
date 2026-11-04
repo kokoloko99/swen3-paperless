@@ -107,3 +107,51 @@ document bodies, comment text, tokens or passwords as application log fields.
 To enable detailed logs locally, set `logging.level.at.fhtw.swen3=DEBUG` in the
 application properties, or the environment variable
 `LOGGING_LEVEL_AT_FHTW_SWEN3=DEBUG` for the relevant Docker service.
+
+## GitFlow
+
+Ab Sprint 3 verwenden wir GitFlow. Die bisherigen Sprint-1-/Sprint-2-Commits und
+direkten Pushes bleiben unverändert; sie wurden nicht nachträglich als
+Feature-Branches oder Pull Requests dargestellt.
+
+| Branch | Zweck | Ziel des Pull Requests |
+| --- | --- | --- |
+| `main` | Stabiler Stand für Abgaben | — |
+| `develop` | Gemeinsamer Entwicklungsstand | — |
+| `feature/<name>` | Einzelne neue Funktion, von `develop` abzweigen | `develop` |
+| `release/<version>` | Abgabe vorbereiten, von `develop` abzweigen | `main`, danach zurück nach `develop` |
+| `hotfix/<name>` | Dringenden Fehler im Abgabestand beheben, von `main` abzweigen | `main`, danach zurück nach `develop` |
+
+Neue Arbeit wird nicht direkt auf `main` oder `develop` gepusht. Für beide
+Entwickler gilt: Änderungen auf einem eigenen Branch committen, pushen und einen
+Pull Request erstellen. Der Kollege prüft den PR vor dem Merge. Merge-Commits
+erhalten die Branch-Historie; daher auf GitHub **Create a merge commit** verwenden.
+
+### Neue Funktion
+
+```sh
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/meine-funktion
+# Dateien bearbeiten
+git add <geänderte-dateien>
+git commit -m "Describe the change"
+git push -u origin feature/meine-funktion
+```
+
+Auf GitHub einen Pull Request von `feature/meine-funktion` nach `develop`
+öffnen. Beschreibung, Prüfung und Testergebnis angeben. Nach dem Review und Merge
+kann der Feature-Branch gelöscht werden. Das PR-Template hilft beim Beschreiben.
+
+### Abgabe / Release
+
+Von `develop` einen Branch wie `release/0.3.0` erstellen. Build und Funktion
+prüfen und einen Pull Request nach `main` öffnen. Nach dem Merge einen neuen
+Versions-Tag, zum Beispiel `v0.3.0`, auf dem Release-Commit in `main` erstellen.
+Anschließend einen Pull Request von `main` nach `develop` öffnen, damit
+Release-Änderungen und Historie wieder zusammengeführt werden. Erst danach den
+Release-Branch löschen.
+
+Veröffentlichte Release-Tags bleiben ab jetzt unverändert. Für einen neueren
+Abgabestand wird eine neue Versionsnummer vergeben. Die früheren Tags werden
+nicht weiter verschoben.
