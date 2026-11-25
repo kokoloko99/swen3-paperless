@@ -6,6 +6,21 @@ All notable changes to this project are documented in this file.
 
 ## [0.3.0] - 2026-11-25
 
+### Vervollstaendigung der sieben Vorgaben am 25.11.2026
+
+- REST speichert Originaldateien in MinIO, bevor der OCR-Auftrag publiziert wird.
+- Neue OCR-Referenzqueue `paperless.ocr.v5`; der OCR-Worker laedt Originale aus MinIO.
+- Eigenstaendige Anwendung `paperless-indexing-worker` und persistente Ergebnisqueue
+  `paperless.indexing.v1`; Elasticsearch-Client und Indexierung befinden sich dort.
+- Elasticsearch, Logstash und Kibana starten standardmaessig. Strukturierte ECS-Logs
+  von REST und beiden Workern werden durch Logstash nach Elasticsearch uebernommen.
+- Unit-Tests, Coverage-Grenzen und GitHub-CI fuer alle drei Java-Anwendungen.
+- Reproduzierbarer Smoke-Test mit einzeln gestoppten Workern sowie MinIO-/Queue-/ELK-Pruefung.
+- Auf ausdruecklichen Wunsch wird der bestehende Tag v0.3.0 auf diesen vervollstaendigten
+  Stand aktualisiert. Vorheriger Ziel-Commit: `e8683a3fa015598e0982b85d255340202627323b`.
+
+### Zuerst veroeffentlichter Stand
+
 Sprint 4; local implementation from 18.11.2026, published on 25.11.2026.
 
 - Elasticsearch 9.4.1, persistenter Index und optionales Kibana in Docker Compose.

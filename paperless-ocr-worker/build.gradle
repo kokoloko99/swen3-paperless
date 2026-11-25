@@ -24,7 +24,6 @@ repositories {
 // Bindet die Spring-UnterstÃ¼tzung fÃ¼r RabbitMQ ein.
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
-    implementation 'co.elastic.clients:elasticsearch-java:9.4.1'
     implementation 'io.minio:minio:8.5.17'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

@@ -23,6 +23,7 @@ repositories {
 
 // Bindet Bibliotheken für API, Datenbank, Sicherheit, RabbitMQ und Tests ein.
 dependencies {
+    implementation 'io.minio:minio:8.5.17'
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
