@@ -396,9 +396,9 @@ Für eine Abgabe einen Release-Branch erstellen, prüfen und per PR nach `main`
 Änderungen per PR von `main` nach `develop` zurückführen.
 Veröffentlichte Tags künftig nicht verschieben, sondern neue Versionen vergeben.
 
-Git-Tags und Build-Versionen sind derzeit nicht synchron: Die Gradle-Projekte
-verwenden noch `0.1.0`, während auf GitHub bereits `v0.2.0` existiert.
-Dies sollte bei der nächsten Release-Vorbereitung angeglichen werden.
+Abgabe Sprint 4: **v0.3.0**. Beide Gradle-Projekte verwenden Version `0.3.0`.
+Der [Pruefnachweis vom 25.11.2026](docs/verification-2026-11-25.md) dokumentiert
+Tests, Coverage und den praktischen OCR-/Elasticsearch-Test.
 
 ## Erfahrungen und offene Punkte
 
