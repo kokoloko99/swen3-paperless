@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+// Steuert das Hinzufügen, Lesen und Löschen von Kommentaren.
 @Service
 @RequiredArgsConstructor
 public class CommentService {
@@ -22,6 +23,7 @@ public class CommentService {
     private final CommentValidator commentValidator;
     private final Logger logger;
 
+    // Prüft die Daten und das Dokument, setzt den Zeitstempel und speichert den Kommentar.
     public CommentModel addComment(CommentModel comment) {
         commentValidator.validate(comment);
 
@@ -37,6 +39,7 @@ public class CommentService {
         return saved;
     }
 
+    // Prüft das Dokument und lädt dann seine Kommentare.
     public List<CommentModel> getComments(UUID documentId) {
         if (!documentPersistence.existsById(documentId)) {
             logger.warn("Cannot get comments: document {} was not found", documentId);
@@ -48,6 +51,7 @@ public class CommentService {
         return comments;
     }
 
+    // Löscht den Kommentar nur, wenn er zum angegebenen Dokument gehört.
     public void deleteComment(UUID documentId, UUID commentId) {
         commentPersistence.findById(commentId)
                 .filter(comment -> documentId.equals(comment.getDocumentId()))

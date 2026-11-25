@@ -10,6 +10,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// Prüft die Kommentarregeln direkt ohne simulierte Abhängigkeiten.
 class CommentValidatorTest {
 
     private final CommentValidator validator = new CommentValidator(LoggerFactory.getLogger(CommentValidator.class));
@@ -22,16 +23,19 @@ class CommentValidatorTest {
         return comment;
     }
 
+    // Prüft, dass gültige Kommentardaten akzeptiert werden.
     @Test
     void acceptsValidComment() {
         assertThatCode(() -> validator.validate(validComment())).doesNotThrowAnyException();
     }
 
+    // Prüft, dass ein fehlendes Kommentarobjekt abgelehnt wird.
     @Test
     void rejectsNullComment() {
         assertThatThrownBy(() -> validator.validate(null)).isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass eine fehlende Dokument-ID abgelehnt wird.
     @Test
     void rejectsMissingDocumentId() {
         CommentModel comment = validComment();
@@ -39,6 +43,7 @@ class CommentValidatorTest {
         assertThatThrownBy(() -> validator.validate(comment)).isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass ein fehlender oder leerer Autor abgelehnt wird.
     @Test
     void rejectsMissingOrBlankAuthor() {
         CommentModel missingAuthor = validComment();
@@ -50,6 +55,7 @@ class CommentValidatorTest {
         assertThatThrownBy(() -> validator.validate(blankAuthor)).isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass ein fehlender oder leerer Text abgelehnt wird.
     @Test
     void rejectsMissingOrBlankText() {
         CommentModel missingText = validComment();
@@ -61,6 +67,7 @@ class CommentValidatorTest {
         assertThatThrownBy(() -> validator.validate(blankText)).isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass die Textgrenze von 1000 Zeichen eingehalten wird.
     @Test
     void rejectsTextLongerThanOneThousandCharacters() {
         CommentModel comment = validComment();

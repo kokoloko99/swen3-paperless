@@ -12,6 +12,7 @@ import at.fhtw.swen3.paperless_rest.common.persistence.PersistenceOperationExcep
 import java.util.Optional;
 import java.util.UUID;
 
+// Verbindet die Persistenzschnittstelle mit dem Repository und übersetzt Datenbankfehler.
 @Repository
 @RequiredArgsConstructor
 public class DocumentPersistenceAdapter implements DocumentPersistence {
@@ -20,6 +21,17 @@ public class DocumentPersistenceAdapter implements DocumentPersistence {
     private final DocumentMapper documentMapper;
     private final Logger logger;
 
+    // Löscht das Dokument über das Repository und übersetzt Datenbankfehler.
+    @Override
+    public void deleteById(UUID id) {
+        try {
+            documentRepository.deleteById(id);
+        } catch (DataAccessException ex) {
+            throw new PersistenceOperationException("Could not delete document", ex);
+        }
+    }
+
+    // Wandelt das Modell in eine Entity um, speichert sie und gibt ein Modell zurück.
     @Override
     public DocumentModel save(DocumentModel document) {
         try {
@@ -31,6 +43,7 @@ public class DocumentPersistenceAdapter implements DocumentPersistence {
         }
     }
 
+    // Lädt die Entity und wandelt sie in ein Modell um.
     @Override
     public Optional<DocumentModel> findById(UUID id) {
         try {
@@ -42,6 +55,7 @@ public class DocumentPersistenceAdapter implements DocumentPersistence {
         }
     }
 
+    // Fragt beim Repository nach, ob das Dokument existiert.
     @Override
     public boolean existsById(UUID id) {
         try {

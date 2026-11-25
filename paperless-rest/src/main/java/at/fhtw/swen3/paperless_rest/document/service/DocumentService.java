@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+// Steuert das Speichern von Dokumentdaten und die Übergabe an die OCR-Verarbeitung.
 @Service
 @RequiredArgsConstructor
 public class DocumentService {
@@ -22,6 +23,14 @@ public class DocumentService {
     private final OcrPublisher ocrPublisher;
     private final Logger logger;
 
+    // Löscht das Dokument und seine Kommentare gemeinsam in einer Transaktion.
+    @Transactional
+    public void deleteDocument(UUID id) {
+        documentPersistence.deleteById(id);
+        logger.info("Document {} deletion requested, including its comments", id);
+    }
+
+    // Prüft die Angaben, speichert die Metadaten und sendet den Dateiinhalt an die OCR-Queue.
     @Transactional
     public DocumentModel uploadDocument(DocumentModel document, byte[] content) {
         documentValidator.validate(document);
@@ -37,6 +46,7 @@ public class DocumentService {
         return saved;
     }
 
+    // Sucht die Dokumentdaten und meldet einen Fehler, wenn sie fehlen.
     public DocumentModel getDocument(UUID id) {
         return documentPersistence.findById(id).orElseThrow(() -> {
             logger.warn("Document {} was not found", id);

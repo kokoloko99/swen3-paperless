@@ -24,6 +24,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// Prüft die Geschäftslogik mit simulierten Persistenzschnittstellen und echter Validierung.
 @ExtendWith(MockitoExtension.class)
 class CommentServiceTest {
 
@@ -39,6 +40,7 @@ class CommentServiceTest {
 
     private CommentService commentService;
 
+    // Erstellt vor jedem Test den Service ohne echte Datenbank.
     @BeforeEach
     void setUp() {
         commentService = new CommentService(
@@ -65,6 +67,7 @@ class CommentServiceTest {
         return comment;
     }
 
+    // Prüft, dass der Kommentar für ein vorhandenes Dokument mit Zeitstempel gespeichert wird.
     @Test
     void addCommentPersistsWhenDocumentExists() {
         when(documentPersistence.existsById(DOCUMENT_ID)).thenReturn(true);
@@ -82,6 +85,7 @@ class CommentServiceTest {
         assertThat(result.getCreatedAt()).isNotNull();
     }
 
+    // Prüft, dass ein fehlendes Dokument eine DocumentNotFoundException auslöst.
     @Test
     void addCommentThrowsWhenDocumentMissing() {
         when(documentPersistence.existsById(DOCUMENT_ID)).thenReturn(false);
@@ -90,6 +94,7 @@ class CommentServiceTest {
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
+    // Prüft, dass ein leerer Text abgelehnt wird.
     @Test
     void addCommentThrowsWhenTextBlank() {
         CommentModel comment = validComment();
@@ -99,6 +104,7 @@ class CommentServiceTest {
                 .isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass ein leerer Autor abgelehnt wird.
     @Test
     void addCommentThrowsWhenAuthorBlank() {
         CommentModel comment = validComment();
@@ -108,6 +114,7 @@ class CommentServiceTest {
                 .isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass ein Text mit mehr als 1000 Zeichen abgelehnt wird.
     @Test
     void addCommentThrowsWhenTextTooLong() {
         CommentModel comment = validComment();
@@ -117,6 +124,7 @@ class CommentServiceTest {
                 .isInstanceOf(InvalidCommentException.class);
     }
 
+    // Prüft, dass Kommentare eines vorhandenen Dokuments zurückgegeben werden.
     @Test
     void getCommentsReturnsCommentsWhenDocumentExists() {
         when(documentPersistence.existsById(DOCUMENT_ID)).thenReturn(true);
@@ -128,6 +136,7 @@ class CommentServiceTest {
         assertThat(result.get(0).getAuthor()).isEqualTo("Alice");
     }
 
+    // Prüft, dass beim Lesen ein fehlendes Dokument gemeldet wird.
     @Test
     void getCommentsThrowsWhenDocumentMissing() {
         when(documentPersistence.existsById(DOCUMENT_ID)).thenReturn(false);
@@ -136,6 +145,7 @@ class CommentServiceTest {
                 .isInstanceOf(DocumentNotFoundException.class);
     }
 
+    // Prüft, dass ein zum Dokument gehörender Kommentar gelöscht wird.
     @Test
     void deleteCommentRemovesWhenBelongsToDocument() {
         when(commentPersistence.findById(COMMENT_ID)).thenReturn(Optional.of(storedComment(DOCUMENT_ID)));
@@ -145,6 +155,7 @@ class CommentServiceTest {
         verify(commentPersistence).deleteById(COMMENT_ID);
     }
 
+    // Prüft, dass ein fehlender Kommentar keinen Löschauftrag auslöst.
     @Test
     void deleteCommentDoesNothingWhenCommentMissing() {
         when(commentPersistence.findById(COMMENT_ID)).thenReturn(Optional.empty());
@@ -154,6 +165,7 @@ class CommentServiceTest {
         verify(commentPersistence, never()).deleteById(COMMENT_ID);
     }
 
+    // Prüft, dass ein Kommentar eines anderen Dokuments nicht gelöscht wird.
     @Test
     void deleteCommentDoesNothingWhenCommentBelongsToDifferentDocument() {
         when(commentPersistence.findById(COMMENT_ID)).thenReturn(Optional.of(storedComment(OTHER_DOCUMENT_ID)));
