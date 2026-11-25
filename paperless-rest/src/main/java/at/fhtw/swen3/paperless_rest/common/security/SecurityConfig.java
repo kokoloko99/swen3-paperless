@@ -8,12 +8,15 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
+// Schützt die API durch die Anmeldung mit einem JWT.
 @Configuration
 public class SecurityConfig {
 
+    // Verlangt einen gültigen Token für alle Anfragen und verwendet keine Login-Sitzung im Backend.
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
+                // Die API verwendet explizite Bearer-Tokens statt einer Cookie-Anmeldung.
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())

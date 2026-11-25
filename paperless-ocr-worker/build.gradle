@@ -1,5 +1,7 @@
+// Aktiviert Java und Spring Boot fÃ¼r den eigenstÃ¤ndigen Worker.
 plugins {
     id 'java'
+    id 'jacoco'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -7,16 +9,40 @@ plugins {
 group = 'at.fhtw.swen3'
 version = '0.1.0'
 
+// Baut den Worker mit Java 21.
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
+// LÃ¤dt die Bibliotheken aus Maven Central.
 repositories {
     mavenCentral()
 }
 
+// Bindet die Spring-UnterstÃ¼tzung fÃ¼r RabbitMQ ein.
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    implementation 'co.elastic.clients:elasticsearch-java:9.4.1'
+    implementation 'io.minio:minio:8.5.17'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+jacocoTestReport {
+    reports { xml.required = true; html.required = true }
+}
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit { counter = 'LINE'; minimum = 0.71 }
+        }
+    }
+}
+check.dependsOn jacocoTestCoverageVerification

@@ -1,25 +1,31 @@
+// Die relative API-Adresse wird von NGINX an das Backend weitergeleitet.
 const API = '/api/v1/documents';
 const STORAGE_KEY = 'paperless-document-ids';
 
+// Legt die Adresse und die Browser-Anwendung für den Keycloak-Login fest.
 const AUTH = 'http://localhost:8082/realms/paperless/protocol/openid-connect';
 const CLIENT_ID = 'paperless-ui';
 const REDIRECT_URI = window.location.origin + '/';
 const TOKEN_KEY = 'paperless-token';
 
+// Wandelt Bytes in eine Zeichenfolge um, die sicher in eine URL passt.
 function base64Url(bytes) {
     return btoa(String.fromCharCode(...new Uint8Array(bytes)))
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+// Erzeugt einen zufälligen Wert für die Absicherung des Logins.
 function randomString() {
     return base64Url(crypto.getRandomValues(new Uint8Array(32)));
 }
 
+// Liest den gespeicherten Token nur dann aus, wenn er noch gültig ist.
 function getToken() {
     const stored = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
     return stored && stored.expiresAt > Date.now() ? stored : null;
 }
 
+// Bereitet den geschützten Login mit PKCE vor und öffnet die Keycloak-Anmeldeseite.
 async function login() {
     const verifier = randomString();
     const state = randomString();
@@ -38,6 +44,7 @@ async function login() {
     window.location.assign(`${AUTH}/auth?${params}`);
 }
 
+// Prüft die Login-Rückkehr und tauscht den Anmeldecode gegen Tokens aus.
 async function handleLoginCallback() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -71,6 +78,7 @@ async function handleLoginCallback() {
     }
 }
 
+// Entfernt den lokalen Token und meldet den Benutzer bei Keycloak ab.
 function logout() {
     const token = JSON.parse(localStorage.getItem(TOKEN_KEY) || 'null');
     localStorage.removeItem(TOKEN_KEY);
@@ -80,15 +88,18 @@ function logout() {
     }
     window.location.assign(`${AUTH.replace('/protocol/openid-connect', '')}/protocol/openid-connect/logout?${params}`);
 }
+// Sucht ein HTML-Element über seine ID.
 const $ = (id) => document.getElementById(id);
 let currentId = null;
 
+// Zeigt eine Erfolgs- oder Fehlermeldung auf der Oberfläche an.
 function showMessage(text, isError) {
     const el = $('message');
     el.textContent = text;
     el.className = isError ? 'error' : 'ok';
 }
 
+// Ruft die API mit dem Bearer-Token auf und meldet fehlgeschlagene Anfragen.
 async function request(url, options = {}) {
     const token = getToken();
     if (!token) {
@@ -109,12 +120,14 @@ async function request(url, options = {}) {
     return response;
 }
 
+// Liest die gemerkten Dokumente aus dem Speicher dieses Browsers.
 function loadIds() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
         .map((entry) => typeof entry === 'string' ? { id: entry, filename: '' } : entry)
         .filter((document) => document && typeof document.id === 'string');
 }
 
+// Merkt sich ID und Dateiname eines Dokuments und aktualisiert die Liste.
 function rememberId(id, filename) {
     const ids = loadIds().filter((document) => document.id !== id);
     ids.unshift({ id, filename });
@@ -122,6 +135,7 @@ function rememberId(id, filename) {
     renderList();
 }
 
+// Erstellt die sichtbare Dokumentliste mit anklickbaren Einträgen.
 function renderList() {
     const list = $('document-list');
     list.replaceChildren();
@@ -136,6 +150,7 @@ function renderList() {
     }
 }
 
+// Lädt fehlende Dateinamen für bereits gemerkte Dokumente nach.
 async function loadDocumentNames() {
     for (const { id } of loadIds().filter((document) => !document.filename)) {
         try {
@@ -147,6 +162,7 @@ async function loadDocumentNames() {
     }
 }
 
+// Lädt Dokumentdaten und Kommentare und zeigt sie oder eine Fehlermeldung an.
 async function openDocument(id) {
     try {
         const doc = await (await request(`${API}/${encodeURIComponent(id)}`)).json();
@@ -162,6 +178,7 @@ async function openDocument(id) {
     }
 }
 
+// Schreibt die Metadaten des Dokuments in den Detailbereich.
 function renderMeta(doc) {
     const meta = $('meta');
     meta.replaceChildren();
@@ -181,6 +198,7 @@ function renderMeta(doc) {
     }
 }
 
+// Lädt die Kommentare und zeigt sie mit ihren Löschbuttons an.
 async function loadComments() {
     const comments = await (await request(`${API}/${currentId}/comments`)).json();
     const list = $('comments');
@@ -198,6 +216,7 @@ async function loadComments() {
     }
 }
 
+// Löscht den Kommentar über die API und lädt danach die Liste neu.
 async function deleteComment(commentId) {
     try {
         await request(`${API}/${currentId}/comments/${commentId}`, { method: 'DELETE' });
@@ -207,6 +226,33 @@ async function deleteComment(commentId) {
     }
 }
 
+// Löscht das Dokument samt Kommentaren und entfernt es aus der gemerkten Liste.
+$('delete-document').addEventListener('click', async () => {
+    const id = currentId;
+    if (!id || !window.confirm('Dokument und alle zugehörigen Kommentare wirklich löschen?')) {
+        return;
+    }
+    const button = $('delete-document');
+    button.disabled = true;
+    try {
+        await request(`${API}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(loadIds().filter((doc) => doc.id !== id)));
+        if (currentId === id) {
+            currentId = null;
+            $('detail').hidden = true;
+            $('comments').replaceChildren();
+            $('meta').replaceChildren();
+        }
+        renderList();
+        showMessage('Dokument und zugehörige Kommentare gelöscht.', false);
+    } catch (e) {
+        showMessage(e.message, true);
+    } finally {
+        button.disabled = false;
+    }
+});
+
+// Sendet die ausgewählte Datei als FormData an die Upload-API.
 $('upload-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData();
@@ -221,11 +267,13 @@ $('upload-form').addEventListener('submit', async (event) => {
     }
 });
 
+// Öffnet das Dokument mit der eingegebenen ID.
 $('lookup-form').addEventListener('submit', (event) => {
     event.preventDefault();
     openDocument($('lookup-id').value.trim());
 });
 
+// Sendet Autor und Kommentartext als JSON an die API.
 $('comment-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -242,8 +290,10 @@ $('comment-form').addEventListener('submit', async (event) => {
     }
 });
 
+// Verbindet den Abmeldebutton mit der Logout-Funktion.
 $('logout').addEventListener('click', logout);
 
+// Verarbeitet beim Start den Login und lädt danach die Oberfläche.
 (async () => {
     await handleLoginCallback();
     if (!getToken()) {

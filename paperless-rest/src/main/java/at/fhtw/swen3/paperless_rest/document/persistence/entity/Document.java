@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 
+// Beschreibt die Dokumentmetadaten in der Datenbank und speichert keinen Dateiinhalt.
 @Entity
 @Getter
 @Setter

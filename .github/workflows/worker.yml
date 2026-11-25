@@ -1,0 +1,57 @@
+name: Paperless CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test worker and enforce coverage
+        run: bash paperless-rest/gradlew -p paperless-ocr-worker clean check bootJar --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worker-test-reports
+          path: paperless-ocr-worker/build/reports/
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: paperless
+          POSTGRES_USER: paperless
+          POSTGRES_PASSWORD: paperless
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U paperless -d paperless"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      rabbitmq:
+        image: rabbitmq:4-management
+        env:
+          RABBITMQ_DEFAULT_USER: paperless
+          RABBITMQ_DEFAULT_PASS: paperless
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test backend and enforce coverage
+        run: bash paperless-rest/gradlew -p paperless-rest clean check bootJar --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: paperless-rest/build/reports/

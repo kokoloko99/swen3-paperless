@@ -15,7 +15,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+// Prüft den Nachrichtenversand mit simulierten RabbitMQ-Aufrufen.
 class RabbitMqOcrPublisherTest {
+    // Prüft, dass ein RabbitMQ-Verbindungsfehler übersetzt wird und seine Ursache behält.
     @Test
     void translatesBrokerFailureAndPreservesCause() {
         RabbitTemplate template = mock(RabbitTemplate.class);
@@ -30,6 +32,7 @@ class RabbitMqOcrPublisherTest {
                 .hasCause(failure);
     }
 
+    // Prüft Dateiinhalt, Nachrichtenangaben, Queue-Adresse und das Warten auf Bestätigung.
     @Test
     void publishesOriginalBytesWithMetadataAndWaitsForConfirmation() {
         RabbitTemplate template = mock(RabbitTemplate.class);
