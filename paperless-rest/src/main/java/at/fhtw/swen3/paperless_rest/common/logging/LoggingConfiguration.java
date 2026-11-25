@@ -8,9 +8,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
+// Stellt jeder anfordernden Klasse einen passenden Logger bereit.
 @Configuration
 public class LoggingConfiguration {
 
+    // Erzeugt einen Logger mit dem Namen der Klasse, die ihn benötigt.
     @Bean
     @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
     Logger logger(InjectionPoint injectionPoint) {

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Paperless</title>
+    <!-- Lädt die Gestaltung der Oberfläche. -->
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
@@ -11,7 +12,9 @@
     <h1>Paperless</h1>
     <button id="logout" type="button">Abmelden</button>
 </header>
+<!-- JavaScript zeigt die Anwendung nach der Anmeldung an. -->
 <main id="app" hidden>
+    <!-- Hier wird eine Datei für den Upload ausgewählt. -->
     <section>
         <h2>Dokument hochladen</h2>
         <form id="upload-form">
@@ -21,6 +24,7 @@
     </section>
 
     <section>
+        <!-- Zeigt gemerkte Dokumente und erlaubt das Laden über eine Dokument-ID. -->
         <h2>Dokumente</h2>
         <form id="lookup-form">
             <input type="text" id="lookup-id" placeholder="Dokument-ID" required>
@@ -29,12 +33,16 @@
         <ul id="document-list"></ul>
     </section>
 
+    <!-- JavaScript füllt diesen Bereich mit Dokumentdaten und Kommentaren. -->
     <section id="detail" hidden>
         <h2>Details</h2>
         <dl id="meta"></dl>
+        <!-- Löscht das ausgewählte Dokument einschließlich seiner Kommentare. -->
+        <button id="delete-document" type="button" class="danger">Dokument löschen</button>
 
         <h3>Kommentare</h3>
         <ul id="comments"></ul>
+        <!-- Erfasst Autor und Text für einen neuen Kommentar. -->
         <form id="comment-form">
             <input type="text" id="author" placeholder="Autor" required>
             <input type="text" id="text" placeholder="Kommentar" maxlength="1000" required>
@@ -42,8 +50,10 @@
         </form>
     </section>
 
+    <!-- Hier erscheinen Erfolgs- und Fehlermeldungen. -->
     <p id="message" role="status"></p>
 </main>
-<script src="app.js?v=2"></script>
+<!-- Lädt die Funktionen für Anmeldung, API-Aufrufe und Benutzeraktionen. -->
+<script src="app.js?v=3"></script>
 </body>
 </html>

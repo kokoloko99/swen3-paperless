@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// Prüft den Upload-Ablauf mit simulierter Persistenz und simuliertem OCR-Versand.
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
 
@@ -33,6 +34,16 @@ class DocumentServiceTest {
 
     private DocumentService documentService;
 
+    // Prüft, dass das Löschen an die Persistenz geht und keinen OCR-Auftrag auslöst.
+    @Test
+    void deleteDocumentDelegatesToPersistence() {
+        UUID id = UUID.randomUUID();
+        documentService.deleteDocument(id);
+        verify(documentPersistence).deleteById(id);
+        org.mockito.Mockito.verifyNoInteractions(ocrPublisher);
+    }
+
+    // Erstellt den Service vor jedem Test mit kontrollierten Ersatz-Abhängigkeiten.
     @BeforeEach
     void setUp() {
         documentService = new DocumentService(
@@ -42,6 +53,7 @@ class DocumentServiceTest {
                 LoggerFactory.getLogger(DocumentService.class));
     }
 
+    // Prüft Zeitstempel, Speicherung und Übergabe des Dateiinhalts an den Publisher.
     @Test
     void uploadDocumentSetsUploadTimeAndPersists() {
         DocumentModel toUpload = new DocumentModel();
@@ -66,6 +78,7 @@ class DocumentServiceTest {
         verify(ocrPublisher).publish(result, new byte[]{1, 2, 3});
     }
 
+    // Prüft, dass ungültige Angaben weder gespeichert noch versendet werden.
     @Test
     void uploadDocumentRejectsInvalidMetadata() {
         DocumentModel invalid = new DocumentModel();
@@ -78,6 +91,7 @@ class DocumentServiceTest {
         org.mockito.Mockito.verifyNoInteractions(ocrPublisher, documentPersistence);
     }
 
+    // Prüft, dass ein Versandfehler als OcrSubmissionException weitergegeben wird.
     @Test
     void uploadFailsWhenOcrPublishingFails() {
         DocumentModel document = new DocumentModel();
@@ -94,6 +108,7 @@ class DocumentServiceTest {
                 .hasCause(failure);
     }
 
+    // Prüft, dass ein vorhandenes Dokument zurückgegeben wird.
     @Test
     void getDocumentReturnsModelWhenFound() {
         UUID id = UUID.randomUUID();
@@ -108,6 +123,7 @@ class DocumentServiceTest {
         assertThat(result.getFilename()).isEqualTo("Existing.pdf");
     }
 
+    // Prüft die Exception für ein fehlendes Dokument.
     @Test
     void getDocumentThrowsWhenNotFound() {
         UUID id = UUID.randomUUID();

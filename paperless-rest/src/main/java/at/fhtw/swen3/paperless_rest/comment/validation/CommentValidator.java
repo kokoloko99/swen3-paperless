@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 
+// Prüft die Pflichtfelder und die erlaubte Textlänge eines Kommentars.
 @Component
 @RequiredArgsConstructor
 public class CommentValidator {
@@ -13,6 +14,7 @@ public class CommentValidator {
     private static final int MAX_TEXT_LENGTH = 1000;
     private final Logger logger;
 
+    // Prüft Dokument-ID, Autor und Text sowie die Grenze von 1000 Zeichen.
     public void validate(CommentModel comment) {
         if (comment == null) {
             reject("Comment must not be null");
@@ -31,6 +33,7 @@ public class CommentValidator {
         }
     }
 
+    // Protokolliert den Fehler und wirft eine InvalidCommentException.
     private void reject(String message) {
         logger.warn("Comment validation failed: {}", message);
         throw new InvalidCommentException(message);

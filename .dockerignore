@@ -1,0 +1,6 @@
+.git
+.idea
+tmp
+**/build
+**/bin
+**/.gradle

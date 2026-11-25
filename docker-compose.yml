@@ -1,4 +1,6 @@
+# Startet die Anwendung und ihre benötigten Dienste gemeinsam.
 services:
+  # Speichert Dokumentmetadaten und Kommentare in PostgreSQL.
   postgres:
     image: postgres:16
     container_name: paperless-postgres
@@ -16,6 +18,7 @@ services:
       timeout: 5s
       retries: 10
 
+  # Nimmt OCR-Aufträge entgegen und bietet die Verwaltung auf Port 15672 an.
   rabbitmq:
     image: rabbitmq:4-management
     container_name: paperless-rabbitmq
@@ -34,6 +37,46 @@ services:
       retries: 10
       start_period: 20s
 
+  # Persistenter S3-kompatibler Objektspeicher.
+  minio:
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a4938f37f1be1841b8e7b627ad0207b265345fd0d063e42d7410c78af0e63e68
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-paperless}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-paperless-secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.1
+    profiles: ["tools"]
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: paperless-keycloak
@@ -46,10 +89,12 @@ services:
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
 
+  # Baut den REST-Server und verbindet ihn mit den anderen Diensten.
   rest:
     build: ./paperless-rest
     container_name: paperless-rest
     environment:
+      # Verwendet im Container Port 8080 statt des lokalen IDE-Ports 8083.
       SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/paperless
       SPRING_DATASOURCE_USERNAME: paperless
@@ -66,6 +111,7 @@ services:
       keycloak:
         condition: service_started
 
+  # Speichert Originale, erkennt Text und indexiert OCR-Ergebnisse.
   ocr-worker:
     build:
       context: .
@@ -73,11 +119,20 @@ services:
     container_name: paperless-ocr-worker
     environment:
       SPRING_RABBITMQ_HOST: rabbitmq
+      PAPERLESS_MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-paperless}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-paperless-secret}
+      PAPERLESS_ELASTICSEARCH_URL: http://elasticsearch:9200
     depends_on:
       rabbitmq:
         condition: service_healthy
+      minio:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     restart: unless-stopped
 
+  # Liefert das Frontend über NGINX auf Port 8081 aus.
   ui:
     build: ./paperless-ui
     container_name: paperless-ui
@@ -86,6 +141,9 @@ services:
     depends_on:
       - rest
 
+# Behält Datenbank und Queue-Daten auch nach dem Entfernen der Container.
 volumes:
   postgres-data:
   rabbitmq-data:
+  minio-data:
+  elasticsearch-data:

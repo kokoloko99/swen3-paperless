@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+// Enthält die Dokumentdaten, mit denen der Service arbeitet.
 @Getter
 @Setter
 @NoArgsConstructor
