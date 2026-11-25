@@ -146,7 +146,7 @@ abgearbeitet sein; das Skript prueft zu Beginn beide Queues.
 Die frueheren Berichte `verification-2026-11-25.md` und die urspruenglichen vier
 Exercise-Issues beschreiben den zuerst geprueften Stand. Sie ersetzen nicht den
 Pruefbericht fuer diese anschliessend vorgelegte Sieben-Punkte-Liste.
-Die aktuelle Verifikation wird vor der Tag-Aktualisierung ergaenzt.
+Aktueller Nachweis: [Pruefung aller sieben Vorgaben](verification-seven-requirements-2026-11-25.md).
 
 ## Technische Referenzen
 

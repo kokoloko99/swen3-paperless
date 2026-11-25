@@ -108,6 +108,9 @@ def main():
     originals = Minio("localhost:9000", access_key=os.getenv("MINIO_ROOT_USER", "paperless"),
                       secret_key=os.getenv("MINIO_ROOT_PASSWORD", "paperless-secret"), secure=False)
     session = login()
+    wait_for("REST server is ready", lambda: session.get(
+        "http://localhost:8080/api/v1/documents/00000000-0000-0000-0000-000000000000",
+        timeout=10).status_code == 404)
     for queue in (OCR_QUEUE, INDEX_QUEUE):
         assert broker(f"/queues/%2F/{queue}")["messages"] == 0, "Drain pending work before this smoke test"
     documents = []
