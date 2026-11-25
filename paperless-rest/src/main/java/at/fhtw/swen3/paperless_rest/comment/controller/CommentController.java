@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
+// Nimmt HTTP-Anfragen für Kommentare entgegen.
 @RestController
 @RequestMapping("/api/v1/documents/{documentId}/comments")
 @RequiredArgsConstructor
@@ -29,6 +30,7 @@ public class CommentController {
     private final CommentDtoMapper commentDtoMapper;
     private final Logger logger;
 
+    // Nimmt einen neuen Kommentar entgegen und antwortet mit Status 201.
     @PostMapping
     public ResponseEntity<CommentDto> addComment(@PathVariable UUID documentId,
                                                   @RequestBody CreateCommentRequest request) {
@@ -37,12 +39,14 @@ public class CommentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(commentDtoMapper.toDto(saved));
     }
 
+    // Gibt die Kommentare eines Dokuments mit Status 200 zurück.
     @GetMapping
     public ResponseEntity<List<CommentDto>> getComments(@PathVariable UUID documentId) {
         logger.debug("Getting comments for document {}", documentId);
         return ResponseEntity.ok(commentDtoMapper.toDtos(commentService.getComments(documentId)));
     }
 
+    // Beauftragt das Löschen und antwortet mit Status 204.
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> deleteComment(@PathVariable UUID documentId, @PathVariable UUID commentId) {
         logger.info("Deleting comment {} from document {}", commentId, documentId);

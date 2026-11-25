@@ -25,15 +25,42 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
+// Prüft die HTTP-Antworten mit einem simulierten Dokumentservice.
 @WebMvcTest(DocumentController.class)
 @Import({DocumentDtoMapperImpl.class, SecurityConfig.class, LoggingConfiguration.class})
 @WithMockUser
 class DocumentControllerTest {
+
+    // Prüft den Lösch-Endpunkt und die Weitergabe der Dokument-ID.
+    @Test
+    void deleteReturnsNoContent() throws Exception {
+        mockMvc.perform(delete("/api/v1/documents/{id}", DOCUMENT_ID))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(documentService).deleteDocument(DOCUMENT_ID);
+    }
+
+    // Prüft, dass Löschen ohne Anmeldung abgewiesen wird.
+    @Test
+    @WithAnonymousUser
+    void deleteRequiresAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/v1/documents/{id}", DOCUMENT_ID))
+                .andExpect(status().isUnauthorized());
+        org.mockito.Mockito.verifyNoInteractions(documentService);
+    }
+
+    // Prüft, dass eine ungültige ID nicht an den Service weitergegeben wird.
+    @Test
+    void deleteRejectsInvalidId() throws Exception {
+        mockMvc.perform(delete("/api/v1/documents/{id}", "not-a-uuid"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(documentService);
+    }
 
     private static final UUID DOCUMENT_ID = UUID.randomUUID();
     private static final UUID MISSING_ID = UUID.randomUUID();
@@ -57,6 +84,7 @@ class DocumentControllerTest {
         return document;
     }
 
+    // Prüft Status 201 und die zurückgegebenen Dokumentdaten beim Upload.
     @Test
     void uploadReturnsCreatedWithDocumentMetadata() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
@@ -69,6 +97,7 @@ class DocumentControllerTest {
                 .andExpect(jsonPath("$.filename").value("HelloWorld.pdf"));
     }
 
+    // Prüft Status 400 bei ungültigen Dokumentangaben.
     @Test
     void uploadReturnsBadRequestWhenDocumentMetadataIsInvalid() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "", "application/pdf", new byte[0]);
@@ -79,6 +108,7 @@ class DocumentControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // Prüft Status 503 und eine allgemeine Meldung bei einem OCR-Versandfehler.
     @Test
     void uploadReturnsServiceUnavailableWhenOcrSubmissionFails() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "scan.pdf", "application/pdf", new byte[]{1});
@@ -91,6 +121,7 @@ class DocumentControllerTest {
                 .andExpect(content().string("OCR service unavailable. Please try again later."));
     }
 
+    // Prüft, dass Datenbankfehler Status 503 liefern und keine internen Details verraten.
     @Test
     void getReturnsServiceUnavailableWithoutDatabaseDetails() throws Exception {
         when(documentService.getDocument(DOCUMENT_ID))
@@ -102,6 +133,7 @@ class DocumentControllerTest {
                 .andExpect(content().string("Document storage unavailable. Please try again later."));
     }
 
+    // Prüft Status 500, wenn der Dateiinhalt nicht gelesen werden kann.
     @Test
     void uploadReturnsInternalServerErrorWhenFileCannotBeRead() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "scan.pdf", "application/pdf", new byte[]{1}) {
@@ -117,6 +149,7 @@ class DocumentControllerTest {
         org.mockito.Mockito.verifyNoInteractions(documentService);
     }
 
+    // Prüft Status 200 und die Metadaten eines vorhandenen Dokuments.
     @Test
     void getReturnsDocumentWhenFound() throws Exception {
         when(documentService.getDocument(eq(DOCUMENT_ID))).thenReturn(sampleDocument());
@@ -126,6 +159,7 @@ class DocumentControllerTest {
                 .andExpect(jsonPath("$.filename").value("HelloWorld.pdf"));
     }
 
+    // Prüft Status 404 für ein fehlendes Dokument.
     @Test
     void getReturnsNotFoundWhenMissing() throws Exception {
         when(documentService.getDocument(eq(MISSING_ID))).thenThrow(new DocumentNotFoundException(MISSING_ID));
@@ -134,12 +168,14 @@ class DocumentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    // Prüft Status 400 für eine ungültige Dokument-ID.
     @Test
     void getReturnsBadRequestWhenIdIsInvalid() throws Exception {
         mockMvc.perform(get("/api/v1/documents/{id}", "not-a-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
+    // Prüft, dass eine nicht angemeldete Anfrage mit Status 401 abgewiesen wird.
     @Test
     @WithAnonymousUser
     void requestWithoutTokenIsUnauthorized() throws Exception {

@@ -11,10 +11,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Prüft die Umwandlung zwischen Dokumentmodell und Entity.
 class DocumentMapperTest {
 
     private final DocumentMapper mapper = Mappers.getMapper(DocumentMapper.class);
 
+    // Prüft, dass alle Metadaten in die Entity übernommen werden.
     @Test
     void mapsModelToDal() {
         UUID id = UUID.randomUUID();
@@ -34,6 +36,7 @@ class DocumentMapperTest {
         assertThat(dal.getUploadedAt()).isEqualTo(Instant.parse("2026-01-01T10:00:00Z"));
     }
 
+    // Prüft, dass alle gespeicherten Metadaten im Modell ankommen.
     @Test
     void mapsDalToModel() {
         UUID id = UUID.randomUUID();

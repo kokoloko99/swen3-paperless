@@ -1,3 +1,4 @@
+// Aktiviert Java, Spring Boot, die Versionsverwaltung der Abhängigkeiten und die Testabdeckung.
 plugins {
 	id 'java'
 	id 'jacoco'
@@ -6,18 +7,21 @@ plugins {
 }
 
 group = 'at.fhtw.swen3'
-version = '0.1.0'
+version = '0.3.0'
 
+// Verwendet Java 21 zum Kompilieren.
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
+// Lädt die benötigten Bibliotheken aus Maven Central.
 repositories {
 	mavenCentral()
 }
 
+// Bindet Bibliotheken für API, Datenbank, Sicherheit, RabbitMQ und Tests ein.
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -47,14 +51,27 @@ dependencies {
 	testAnnotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
 }
 
+// Führt die JUnit-Tests aus und erstellt danach den Bericht zur Testabdeckung.
 tasks.named('test') {
 	useJUnitPlatform()
 	finalizedBy jacocoTestReport
 }
 
+// Erstellt die Berichte zur Testabdeckung als HTML und XML.
 tasks.named('jacocoTestReport') {
 	reports {
 		xml.required = true
 		html.required = true
 	}
 }
+
+// Sprint 4: enforce more than 70 percent line coverage.
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit { counter = 'LINE'; minimum = 0.71 }
+        }
+    }
+}
+check.dependsOn jacocoTestCoverageVerification

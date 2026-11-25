@@ -2,4 +2,5 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
+// Legt den Namen des REST-Projekts für Gradle fest.
 rootProject.name = 'paperless-rest'
