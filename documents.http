@@ -1,5 +1,6 @@
 # All requests need a JWT: Authorization: Bearer <access_token> (get one via the UI login, see README)
 ### Upload a document (place a file named sample.pdf next to this file)
+# Lädt eine Datei zum Dokument-Endpunkt des Docker-Backends hoch.
 POST http://localhost:8080/api/v1/documents
 Content-Type: multipart/form-data; boundary=boundary
 

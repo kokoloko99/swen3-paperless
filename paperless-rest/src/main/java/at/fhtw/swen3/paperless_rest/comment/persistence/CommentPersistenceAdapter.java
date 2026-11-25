@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+// Verbindet die Persistenzschnittstelle mit dem Repository und übersetzt Datenbankfehler.
 @Repository
 @RequiredArgsConstructor
 public class CommentPersistenceAdapter implements CommentPersistence {
@@ -21,6 +22,7 @@ public class CommentPersistenceAdapter implements CommentPersistence {
     private final CommentMapper commentMapper;
     private final Logger logger;
 
+    // Wandelt den Kommentar für die Datenbank um, speichert ihn und gibt ein Modell zurück.
     @Override
     public CommentModel save(CommentModel comment) {
         try {
@@ -32,6 +34,7 @@ public class CommentPersistenceAdapter implements CommentPersistence {
         }
     }
 
+    // Sucht den Kommentar im Repository und wandelt ihn in ein Modell um.
     @Override
     public Optional<CommentModel> findById(UUID id) {
         try {
@@ -43,6 +46,7 @@ public class CommentPersistenceAdapter implements CommentPersistence {
         }
     }
 
+    // Lädt die Kommentare des Dokuments und wandelt sie in Modelle um.
     @Override
     public List<CommentModel> findByDocumentId(UUID documentId) {
         try {
@@ -56,6 +60,7 @@ public class CommentPersistenceAdapter implements CommentPersistence {
         }
     }
 
+    // Lässt das Repository den Kommentar löschen.
     @Override
     public void deleteById(UUID id) {
         try {

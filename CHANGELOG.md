@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
+Sprint 4; local implementation from 18.11.2026, published on 25.11.2026.
+
+- Elasticsearch 9.4.1, persistenter Index und optionales Kibana in Docker Compose.
+- MinIO-Originalspeicherung im OCR-Worker, eindeutige Objektschluessel pro UUID.
+- Echte Tesseract-OCR fuer Bilder und mehrseitige PDFs mit Poppler.
+- Indexierung ueber den offiziellen Elasticsearch-Java-Client mit explizitem Mapping.
+- Begrenzte Wiederholungen, Timeouts, Nachrichtenvalidierung und Dead-Letter-Queue.
+- Queue-Wechsel auf paperless.ocr.v4 ohne Aenderung der bisherigen Queue.
+- Unit-Tests fuer den Verarbeitungsablauf, Coverage-Grenze von 71 % in beiden Modulen.
+- GitHub-Actions-Pruefung fuer Worker und Backend mit Test- und Coverage-Artefakten.
+- Dokumentloeschung mit Kommentar-Cascade samt Tests und Frontend-Bedienung.
+- Release- und Build-Versionen auf 0.3.0 abgestimmt.
+- Aktueller Pruefnachweis: docs/verification-2026-11-25.md.
+- Abnahme und bekannte Grenzen in docs/sprint-4.md dokumentiert.
+
 ## [0.1.0] - 2026-10-21
 
 ### Added

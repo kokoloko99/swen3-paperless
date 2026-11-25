@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// Prüft gültige und ungültige Dokumentangaben ohne Datenbank.
 class DocumentValidatorTest {
 
     private final DocumentValidator validator = new DocumentValidator(LoggerFactory.getLogger(DocumentValidator.class));
@@ -20,16 +21,19 @@ class DocumentValidatorTest {
         return document;
     }
 
+    // Prüft, dass gültige Angaben akzeptiert werden.
     @Test
     void acceptsValidDocument() {
         assertThatCode(() -> validator.validate(validDocument())).doesNotThrowAnyException();
     }
 
+    // Prüft, dass ein fehlendes Dokumentobjekt abgelehnt wird.
     @Test
     void rejectsNullDocument() {
         assertThatThrownBy(() -> validator.validate(null)).isInstanceOf(InvalidDocumentException.class);
     }
 
+    // Prüft, dass ein fehlender oder leerer Dateiname abgelehnt wird.
     @Test
     void rejectsMissingOrBlankFilename() {
         DocumentModel missingFilename = validDocument();
@@ -41,6 +45,7 @@ class DocumentValidatorTest {
         assertThatThrownBy(() -> validator.validate(blankFilename)).isInstanceOf(InvalidDocumentException.class);
     }
 
+    // Prüft, dass ein fehlender oder leerer Dateityp abgelehnt wird.
     @Test
     void rejectsMissingOrBlankContentType() {
         DocumentModel missingType = validDocument();
@@ -52,6 +57,7 @@ class DocumentValidatorTest {
         assertThatThrownBy(() -> validator.validate(blankType)).isInstanceOf(InvalidDocumentException.class);
     }
 
+    // Prüft, dass leere Dateien und negative Größen abgelehnt werden.
     @Test
     void rejectsZeroOrNegativeFileSize() {
         DocumentModel empty = validDocument();

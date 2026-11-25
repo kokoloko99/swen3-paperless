@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// Prüft den Adapter mit einem simulierten Repository und echten Mappern.
 @ExtendWith(MockitoExtension.class)
 class CommentPersistenceAdapterTest {
 
@@ -32,6 +33,7 @@ class CommentPersistenceAdapterTest {
 
     private CommentPersistenceAdapter adapter;
 
+    // Erstellt vor jedem Test den Adapter mit einem simulierten Repository.
     @BeforeEach
     void setUp() {
         adapter = new CommentPersistenceAdapter(
@@ -51,6 +53,7 @@ class CommentPersistenceAdapterTest {
         return comment;
     }
 
+    // Prüft die Umwandlung beim Speichern und die zurückgegebenen IDs.
     @Test
     void saveMapsModelToEntityAndBack() {
         UUID id = UUID.randomUUID();
@@ -69,6 +72,7 @@ class CommentPersistenceAdapterTest {
         assertThat(saved.getDocumentId()).isEqualTo(DOCUMENT_ID);
     }
 
+    // Prüft die Umwandlung eines gefundenen Kommentars in ein Modell.
     @Test
     void findByIdMapsEntityToModel() {
         UUID id = UUID.randomUUID();
@@ -77,6 +81,7 @@ class CommentPersistenceAdapterTest {
         assertThat(adapter.findById(id)).get().extracting(CommentModel::getDocumentId).isEqualTo(DOCUMENT_ID);
     }
 
+    // Prüft, dass geladene Kommentare als Modelle zurückgegeben werden.
     @Test
     void findByDocumentIdMapsAll() {
         when(commentRepository.findByDocument_Id(DOCUMENT_ID)).thenReturn(List.of(entity(UUID.randomUUID())));
@@ -87,6 +92,7 @@ class CommentPersistenceAdapterTest {
         assertThat(result.get(0).getAuthor()).isEqualTo("Alice");
     }
 
+    // Prüft, dass ein Datenbankfehler übersetzt und seine Ursache erhalten bleibt.
     @Test
     void translatesDeleteFailureAndPreservesCause() {
         UUID id = UUID.randomUUID();
@@ -98,6 +104,7 @@ class CommentPersistenceAdapterTest {
                 .hasCause(failure);
     }
 
+    // Prüft, dass der Löschauftrag an das Repository weitergegeben wird.
     @Test
     void deleteByIdDelegates() {
         UUID id = UUID.randomUUID();
