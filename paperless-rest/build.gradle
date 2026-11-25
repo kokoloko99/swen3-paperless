@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'at.fhtw.swen3'
-version = '0.1.0'
+version = '0.3.0'
 
 // Verwendet Java 21 zum Kompilieren.
 java {

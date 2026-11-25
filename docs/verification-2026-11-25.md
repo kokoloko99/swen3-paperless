@@ -46,3 +46,10 @@ Die Abgabevorbereitung ist in #24 erfasst. Noch offene Folgeaufgaben:
 Die heutige Veroeffentlichung bildet fruehere lokale Implementierungsarbeit ab;
 sie behauptet keine rueckwirkenden Feature-Branches oder menschlichen Peer-Reviews.
 Ein menschliches Peer-Review wurde fuer die hier vorbereitete Abgabe nicht nachgewiesen.
+
+## GitHub-Nachweise
+
+- [Feature-PR #27](https://github.com/kokoloko99/swen3-paperless/pull/27): nach develop uebernommen.
+- [Erfolgreicher PR-CI-Lauf](https://github.com/kokoloko99/swen3-paperless/actions/runs/45609801290): Backend und Worker erfolgreich.
+- [Erfolgreicher Branch-CI-Lauf](https://github.com/kokoloko99/swen3-paperless/actions/runs/45609768445): Backend und Worker erfolgreich.
+- Beide ausfuehrbaren JARs nach der Versionsanpassung auf 0.3.0 erneut erfolgreich gebaut.
