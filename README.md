@@ -10,12 +10,19 @@ asynchroner Übergabe hochgeladener Dateien an einen OCR-Worker.
 - Dokumente einschließlich aller zugehörigen Kommentare löschen.
 - Kommentare zu einem Dokument anlegen, lesen und löschen.
 - Dateiinhalt nach dem Upload an RabbitMQ übergeben.
-- Separater OCR-Worker speichert Originale und indexiert OCR-Texte.
+- REST speichert Originale; getrennte OCR- und Indexing-Worker erkennen und indexieren Text.
 
-Der Worker speichert Originaldateien in MinIO, erkennt Text aus PDF, PNG, JPEG
-und TIFF mit Tesseract und indexiert das Ergebnis ueber den offiziellen Java-Client
-in Elasticsearch. PostgreSQL bleibt fuer Metadaten und Kommentare zustaendig.
-Details, Abnahmeschritte und Grenzen stehen in [Sprint 4](docs/sprint-4.md).
+Der REST-Server speichert Originaldateien in MinIO und sendet eine Dokumentreferenz
+an RabbitMQ. Der eigenstaendige OCR-Worker laedt das Original aus MinIO und erkennt
+Text mit Tesseract/Poppler. Ein separater Indexing-Worker uebernimmt den OCR-Text aus
+einer zweiten Queue und indexiert ihn mit dem Elasticsearch-Java-Client.
+Elasticsearch, Logstash und Kibana starten gemeinsam mit der Anwendung.
+
+Die vollstaendige [Sprint-4-Anleitung](docs/sprint-4.md) ordnet die Umsetzung allen
+sieben Vorgaben zu und beschreibt den Nachrichtenvertrag, Tests und bekannte Grenzen.
+Abgabe bleibt auf ausdruecklichen Wunsch **v0.3.0**; dieser Tag wird nach erfolgreicher
+Pruefung auf den vervollstaendigten Stand aktualisiert. Der vorherige Ziel-Commit
+`e8683a3fa015598e0982b85d255340202627323b` bleibt als historischer Nachweis erhalten.
 
 ## Voraussetzungen und Start
 
@@ -42,10 +49,12 @@ die Dienste etwas Zeit benötigen.
 | Keycloak | http://localhost:8082/ | Benutzerverwaltung und Anmeldung |
 | RabbitMQ AMQP | localhost:5672 | Nachrichtentransport |
 | RabbitMQ-Verwaltung | http://localhost:15672/ | Queues und Consumer beobachten |
-| OCR-Worker | Kein eigener HTTP-Port | Speichern, OCR und Indexierung |
+| OCR-Worker | Kein eigener HTTP-Port | Original laden und Text erkennen |
+| Indexing-Worker | Kein eigener HTTP-Port | OCR-Ergebnisse indexieren |
 | MinIO S3 / Console | http://localhost:9000 / http://localhost:9001 | Originaldateien |
 | Elasticsearch | http://localhost:9200 | OCR-Suchindex |
-| Kibana (Profil tools) | http://localhost:5601 | Index untersuchen |
+| Kibana | http://localhost:5601 | Dokumente und Logs untersuchen |
+| Logstash API | http://localhost:9600 | Log-Pipeline pruefen |
 
 Lokale Demo-Zugänge:
 
@@ -103,19 +112,18 @@ Gemeinsame Sicherheit, Fehlerbehandlung, Logging und Basis-Entities liegen in `c
 
 ```mermaid
 flowchart LR
-    Browser["Frontend: HTML / CSS / JavaScript"] --> NGINX
-    NGINX --> Controller
-    Controller --> Service
-    Service --> Port["Persistenz-Interface"]
-    Port --> Adapter["Adapter / Entity-Mapper"]
-    Adapter --> Repository["Spring Data JPA / Hibernate"]
-    Repository --> PostgreSQL
-    Service --> Publisher["OCR-Publisher-Interface / RabbitMQ-Adapter"]
-    Publisher --> RabbitMQ
-    RabbitMQ --> Worker["OCR-Worker"]
-    Worker --> MinIO
-    Worker --> Tesseract
-    Worker --> Elasticsearch
+    Browser --> NGINX --> REST
+    REST --> PostgreSQL
+    REST -->|Original| MinIO
+    REST -->|Referenz| RabbitOCR[OCR-Queue]
+    RabbitOCR --> OCR[OCR-Worker]
+    MinIO --> OCR
+    OCR -->|Text| RabbitIndex[Indexing-Queue]
+    RabbitIndex --> Indexer[Indexing-Worker] --> Elasticsearch
+    REST --> Logs[ECS-Logs]
+    OCR --> Logs
+    Indexer --> Logs
+    Logs --> Logstash --> Elasticsearch --> Kibana
     Browser --> Keycloak
 ```
 
@@ -210,30 +218,18 @@ noch nicht die Kommentar-Endpunkte.
 
 ## RabbitMQ und Hintergrundverarbeitung
 
-Nach dem Speichern der Metadaten sendet der REST-Server die Datei als binäre
-Nachricht an die dauerhafte Queue **paperless.ocr.v4**. Die Nachricht ist persistent;
-Dokument-ID, Dateiname und MIME-Typ ermöglichen die Zuordnung.
+Der Upload speichert Metadaten in PostgreSQL und das Original unter seiner UUID im
+MinIO-Bucket `documents`. Erst danach wird eine persistente Referenznachricht an
+`paperless.ocr.v5` publiziert. Der OCR-Worker laedt das Original und publiziert den
+erkannten Text nach `paperless.indexing.v1`. Der separate Indexing-Worker speichert
+das Suchdokument in Elasticsearch. Jede Stufe bestaetigt erst nach Erfolg.
 
-Der Publisher wartet bis zu fünf Sekunden auf eine Broker-Bestätigung.
-Diese bestätigt nicht die spätere Worker-Verarbeitung. Der Worker liest die
-Nachricht, speichert das Original und indexiert den OCR-Text. Er bestaetigt nach erfolgreicher Rueckkehr
-aus dem Listener. Es gibt keinen zeitgesteuerten Scheduled Service.
+Beide Consumer besitzen begrenzte Retries und eine eigene dauerhafte Dead-Letter-Queue.
+Nachrichtenvertraege, Upgrade von der alten Binaer-Queue und der praktische Test mit
+gezielt gestoppten Workern sind in [Sprint 4](docs/sprint-4.md) beschrieben.
 
-### Ablauf vorführen
-
-1. RabbitMQ-Verwaltung auf Port 15672 öffnen und `paperless.ocr.v4` auswählen.
-2. Worker stoppen: `docker compose stop ocr-worker`.
-3. Eine Datei in der Oberfläche hochladen; **Ready** sollte steigen.
-4. Worker starten: `docker compose start ocr-worker`.
-5. **Consumers** sollte wieder 1 sein; die wartende Nachricht wird verarbeitet.
-6. Passenden Eintrag mit `docker compose logs --tail 20 ocr-worker` zeigen.
-
-Datenbankspeicherung und RabbitMQ-Versand sind keine gemeinsame atomare
-Transaktion. Ein Versandfehler führt zum Rollback der Upload-Transaktion;
-ein späterer Commit-Fehler oder eine verlorene Bestätigung kann trotzdem eine
-Nachricht hinterlassen. Ein Outbox-Verfahren ist noch nicht implementiert. Der Worker verwendet drei
-Versuche und eine dauerhafte Dead-Letter-Queue (siehe Sprint-4-Dokumentation). Bereits versendete OCR-Nachrichten
-werden durch das spätere Löschen eines Dokuments nicht zurückgerufen.
+Datenbank, Objektspeicherung und Nachrichtenversand sind nicht atomar. Ein Outbox-Verfahren
+fehlt. Bereits publizierte Arbeit wird bei einer Dokumentloeschung nicht storniert.
 
 ## Fehlerbehandlung und Logging
 
@@ -309,9 +305,8 @@ Ergebnisse. Die Tests liegen unter
 | Spring-Kontexttest | Laden der Anwendungskonfiguration |
 
 Mocks isolieren die jeweilige Klasse. Testcontainers ergänzt echte
-Datenbankprüfungen. Vollständig automatisierte End-to-End-Tests über Browser,
-REST, RabbitMQ und Worker fehlen noch; diese Abläufe wurden bisher separat
-praktisch geprüft.
+Datenbankprüfungen. Ein reproduzierbarer Test fuer REST, MinIO, beide Queues und Worker sowie ELK steht
+mit `python scripts/smoke_pipeline.py` bereit. Ein automatisierter Browser-Test fehlt noch.
 
 Mit laufendem Docker und den oben genannten lokalen Abhängigkeiten:
 
@@ -327,8 +322,8 @@ dem Testlauf die Berichte:
 - `paperless-rest/build/reports/jacoco/test/html/index.html`
 
 Die aktuelle Coverage dem neu erzeugten Bericht entnehmen. `check` erzwingt
-in beiden Java-Modulen mindestens 71 % Zeilenabdeckung. GitHub Actions
-prueft Worker und Backend einschliesslich der Coverage-Grenzen.
+in allen drei Java-Modulen mindestens 71 % Zeilenabdeckung. GitHub Actions
+prueft Backend, OCR-Worker und Indexing-Worker einschliesslich der Coverage-Grenzen.
 
 Falls Windows Gradle wegen einer Loopback-Verbindung nicht starten kann, können
 die Tests mit Java 21 im Docker-Build-Image ausgeführt werden. Befehle aus dem
@@ -396,8 +391,8 @@ Für eine Abgabe einen Release-Branch erstellen, prüfen und per PR nach `main`
 Änderungen per PR von `main` nach `develop` zurückführen.
 Veröffentlichte Tags künftig nicht verschieben, sondern neue Versionen vergeben.
 
-Abgabe Sprint 4: **v0.3.0**. Beide Gradle-Projekte verwenden Version `0.3.0`.
-Der [Pruefnachweis vom 25.11.2026](docs/verification-2026-11-25.md) dokumentiert
+Abgabe Sprint 4: **v0.3.0**. Alle drei Gradle-Projekte verwenden Version `0.3.0`.
+Der [Pruefnachweis aller sieben Vorgaben](docs/verification-seven-requirements-2026-11-25.md) dokumentiert
 Tests, Coverage und den praktischen OCR-/Elasticsearch-Test.
 
 ## Erfahrungen und offene Punkte

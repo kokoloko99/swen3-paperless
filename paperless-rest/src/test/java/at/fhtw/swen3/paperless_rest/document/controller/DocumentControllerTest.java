@@ -182,4 +182,14 @@ class DocumentControllerTest {
         mockMvc.perform(get("/api/v1/documents/{id}", DOCUMENT_ID))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void uploadReturns503WhenOriginalStorageFails() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "scan.pdf", "application/pdf", new byte[]{1});
+        when(documentService.uploadDocument(any(), any(byte[].class)))
+            .thenThrow(new at.fhtw.swen3.paperless_rest.document.storage.DocumentStorageException("private endpoint", null));
+        mockMvc.perform(multipart("/api/v1/documents").file(file))
+            .andExpect(status().isServiceUnavailable())
+            .andExpect(content().string("Document storage unavailable. Please try again later."));
+    }
 }

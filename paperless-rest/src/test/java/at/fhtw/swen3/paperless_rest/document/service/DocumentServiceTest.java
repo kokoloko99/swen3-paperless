@@ -32,6 +32,8 @@ class DocumentServiceTest {
     @Mock
     private OcrPublisher ocrPublisher;
 
+    @Mock private DocumentStorage documentStorage;
+
     private DocumentService documentService;
 
     // Prüft, dass das Löschen an die Persistenz geht und keinen OCR-Auftrag auslöst.
@@ -50,6 +52,7 @@ class DocumentServiceTest {
                 documentPersistence,
                 new DocumentValidator(LoggerFactory.getLogger(DocumentValidator.class)),
                 ocrPublisher,
+                documentStorage,
                 LoggerFactory.getLogger(DocumentService.class));
     }
 
@@ -75,7 +78,9 @@ class DocumentServiceTest {
         assertThat(captor.getValue().getFilename()).isEqualTo("HelloWorld.pdf");
         assertThat(captor.getValue().getUploadedAt()).isNotNull();
         assertThat(result.getId()).isEqualTo(savedId);
-        verify(ocrPublisher).publish(result, new byte[]{1, 2, 3});
+        var order = org.mockito.Mockito.inOrder(documentStorage, ocrPublisher);
+        order.verify(documentStorage).store(savedId.toString(), new byte[]{1, 2, 3}, "application/pdf");
+        order.verify(ocrPublisher).publish(result);
     }
 
     // Prüft, dass ungültige Angaben weder gespeichert noch versendet werden.
@@ -88,24 +93,37 @@ class DocumentServiceTest {
 
         assertThatThrownBy(() -> documentService.uploadDocument(invalid, new byte[0]))
                 .isInstanceOf(InvalidDocumentException.class);
-        org.mockito.Mockito.verifyNoInteractions(ocrPublisher, documentPersistence);
+        org.mockito.Mockito.verifyNoInteractions(ocrPublisher, documentPersistence, documentStorage);
     }
 
     // Prüft, dass ein Versandfehler als OcrSubmissionException weitergegeben wird.
     @Test
     void uploadFailsWhenOcrPublishingFails() {
         DocumentModel document = new DocumentModel();
+        document.setId(UUID.randomUUID());
         document.setFilename("scan.pdf");
         document.setContentType("application/pdf");
         document.setSize(1);
         when(documentPersistence.save(any())).thenReturn(document);
         OcrPublishException failure = new OcrPublishException("Publisher unavailable", new RuntimeException("connection refused"));
         org.mockito.Mockito.doThrow(failure)
-                .when(ocrPublisher).publish(any(), any(byte[].class));
+                .when(ocrPublisher).publish(any());
 
         assertThatThrownBy(() -> documentService.uploadDocument(document, new byte[]{1}))
                 .isInstanceOf(at.fhtw.swen3.paperless_rest.document.exception.OcrSubmissionException.class)
                 .hasCause(failure);
+    }
+
+    @Test
+    void storageFailurePreventsQueuePublication() {
+        DocumentModel document = new DocumentModel();
+        document.setId(UUID.randomUUID()); document.setFilename("scan.pdf");
+        document.setContentType("application/pdf"); document.setSize(1);
+        when(documentPersistence.save(any())).thenReturn(document);
+        var failure = new at.fhtw.swen3.paperless_rest.document.storage.DocumentStorageException("offline", null);
+        org.mockito.Mockito.doThrow(failure).when(documentStorage).store(any(), any(), any());
+        assertThatThrownBy(() -> documentService.uploadDocument(document, new byte[]{1})).isSameAs(failure);
+        org.mockito.Mockito.verifyNoInteractions(ocrPublisher);
     }
 
     // Prüft, dass ein vorhandenes Dokument zurückgegeben wird.
