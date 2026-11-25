@@ -392,7 +392,7 @@ Für eine Abgabe einen Release-Branch erstellen, prüfen und per PR nach `main`
 Veröffentlichte Tags künftig nicht verschieben, sondern neue Versionen vergeben.
 
 Abgabe Sprint 4: **v0.3.0**. Alle drei Gradle-Projekte verwenden Version `0.3.0`.
-Der [Pruefnachweis vom 25.11.2026](docs/verification-2026-11-25.md) dokumentiert
+Der [Pruefnachweis aller sieben Vorgaben](docs/verification-seven-requirements-2026-11-25.md) dokumentiert
 Tests, Coverage und den praktischen OCR-/Elasticsearch-Test.
 
 ## Erfahrungen und offene Punkte
