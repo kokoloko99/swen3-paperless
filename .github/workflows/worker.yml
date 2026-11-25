@@ -18,6 +18,21 @@ jobs:
         with:
           name: worker-test-reports
           path: paperless-ocr-worker/build/reports/
+  indexing-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Test indexing worker and enforce coverage
+        run: bash paperless-rest/gradlew -p paperless-indexing-worker clean check bootJar --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: indexing-worker-test-reports
+          path: paperless-indexing-worker/build/reports/
   backend:
     runs-on: ubuntu-latest
     services:

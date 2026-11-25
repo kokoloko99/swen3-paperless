@@ -39,7 +39,8 @@ public class GlobalExceptionHandler {
 
     // Auch der Start oder Abschluss einer Transaktion kann außerhalb des Adapters fehlschlagen.
     // Protokolliert Datenbankfehler und antwortet mit Status 503.
-    @ExceptionHandler({PersistenceOperationException.class, DataAccessException.class, TransactionException.class})
+    @ExceptionHandler({PersistenceOperationException.class, DataAccessException.class, TransactionException.class,
+            at.fhtw.swen3.paperless_rest.document.storage.DocumentStorageException.class})
     public ResponseEntity<String> handlePersistence(Exception ex) {
         logger.error("Database operation failed", ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

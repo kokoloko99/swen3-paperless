@@ -1,4 +1,4 @@
-package at.fhtw.swen3.paperless_ocr_worker;
+package at.fhtw.swen3.paperless_indexing_worker;
 
 import java.io.IOException;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;

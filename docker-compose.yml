@@ -68,11 +68,25 @@ services:
 
   kibana:
     image: docker.elastic.co/kibana/kibana:9.4.1
-    profiles: ["tools"]
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     ports:
       - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.4.1
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+      XPACK_MONITORING_ENABLED: "false"
+    ports:
+      - "9600:9600"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - application-logs:/logs:ro
+      - logstash-data:/usr/share/logstash/data
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -100,7 +114,14 @@ services:
       SPRING_DATASOURCE_USERNAME: paperless
       SPRING_DATASOURCE_PASSWORD: paperless
       SPRING_RABBITMQ_HOST: rabbitmq
+      PAPERLESS_MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-paperless}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-paperless-secret}
+      LOGGING_FILE_NAME: /logs/rest.json
+      LOGGING_STRUCTURED_FORMAT_FILE: ecs
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/paperless/protocol/openid-connect/certs
+    volumes:
+      - application-logs:/logs
     ports:
       - "8080:8080"
     depends_on:
@@ -108,10 +129,12 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
       keycloak:
         condition: service_started
 
-  # Speichert Originale, erkennt Text und indexiert OCR-Ergebnisse.
+  # Laedt Originale aus MinIO und sendet erkannte Texte an die Indexing-Queue.
   ocr-worker:
     build:
       context: .
@@ -122,12 +145,32 @@ services:
       PAPERLESS_MINIO_URL: http://minio:9000
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-paperless}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-paperless-secret}
-      PAPERLESS_ELASTICSEARCH_URL: http://elasticsearch:9200
+      LOGGING_FILE_NAME: /logs/ocr-worker.json
+      LOGGING_STRUCTURED_FORMAT_FILE: ecs
     depends_on:
       rabbitmq:
         condition: service_healthy
       minio:
         condition: service_started
+    volumes:
+      - application-logs:/logs
+    restart: unless-stopped
+
+  indexing-worker:
+    build:
+      context: .
+      dockerfile: paperless-indexing-worker/Dockerfile
+    container_name: paperless-indexing-worker
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      PAPERLESS_ELASTICSEARCH_URL: http://elasticsearch:9200
+      LOGGING_FILE_NAME: /logs/indexing-worker.json
+      LOGGING_STRUCTURED_FORMAT_FILE: ecs
+    volumes:
+      - application-logs:/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped
@@ -147,3 +190,5 @@ volumes:
   rabbitmq-data:
   minio-data:
   elasticsearch-data:
+  application-logs:
+  logstash-data:
