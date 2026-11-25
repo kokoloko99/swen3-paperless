@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// Sendet hochgeladene Dateien an RabbitMQ und wartet auf eine Versandbestätigung.
+// Speichert das Original vor der Verarbeitung bzw. uebergibt nur die Dokumentreferenz an RabbitMQ.
 @Component
 public class RabbitMqOcrPublisher implements OcrPublisher {
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqOcrPublisher.class);
@@ -25,19 +25,22 @@ public class RabbitMqOcrPublisher implements OcrPublisher {
         this.queueName = queueName;
     }
 
-    // Sendet die Datei mit Dokument-ID und Dateiname und wartet auf die Broker-Bestätigung.
+// Speichert das Original vor der Verarbeitung bzw. uebergibt nur die Dokumentreferenz an RabbitMQ.
     @Override
-    public void publish(DocumentModel document, byte[] content) {
+    public void publish(DocumentModel document) {
         MessageProperties properties = new MessageProperties();
+        properties.setHeader("schemaVersion", "1");
         properties.setMessageId(document.getId().toString());
-        properties.setContentType(document.getContentType());
+        properties.setContentType("text/plain");
+        properties.setContentEncoding("UTF-8");
+        properties.setHeader("originalContentType", document.getContentType());
         properties.setDeliveryMode(MessageDeliveryMode.PERSISTENT);
         properties.setHeader("documentId", document.getId().toString());
         properties.setHeader("filename", document.getFilename());
-        Message message = new Message(content, properties);
+        Message message = new Message(document.getId().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8), properties);
 
         logger.debug("Publishing document {} to OCR queue {} ({} bytes)",
-                document.getId(), queueName, content.length);
+                document.getId(), queueName, message.getBody().length);
         try {
             rabbitTemplate.invoke(operations -> {
                 // Der Standard-Exchange leitet die Nachricht an die Queue mit diesem Namen.
@@ -46,7 +49,7 @@ public class RabbitMqOcrPublisher implements OcrPublisher {
                 return null;
             });
             logger.info("RabbitMQ confirmed document {} in OCR queue {} ({} bytes)",
-                    document.getId(), queueName, content.length);
+                    document.getId(), queueName, message.getBody().length);
         } catch (AmqpException ex) {
             // Der zentrale Fehlerhandler protokolliert die vollständige Ursache.
             logger.warn("OCR publish failed for document {} in queue {}", document.getId(), queueName);

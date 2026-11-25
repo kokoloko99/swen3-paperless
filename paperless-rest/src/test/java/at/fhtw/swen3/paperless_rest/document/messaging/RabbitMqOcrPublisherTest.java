@@ -27,14 +27,14 @@ class RabbitMqOcrPublisherTest {
         document.setId(UUID.randomUUID());
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                new RabbitMqOcrPublisher(template, "paperless.ocr").publish(document, new byte[]{1}))
+                new RabbitMqOcrPublisher(template, "paperless.ocr").publish(document))
                 .isInstanceOf(OcrMessagingException.class)
                 .hasCause(failure);
     }
 
     // Prüft Dateiinhalt, Nachrichtenangaben, Queue-Adresse und das Warten auf Bestätigung.
     @Test
-    void publishesOriginalBytesWithMetadataAndWaitsForConfirmation() {
+    void publishesReferenceWithMetadataAndWaitsForConfirmation() {
         RabbitTemplate template = mock(RabbitTemplate.class);
         RabbitOperations operations = mock(RabbitOperations.class);
         when(template.invoke(any())).thenAnswer(invocation -> {
@@ -47,16 +47,19 @@ class RabbitMqOcrPublisherTest {
         document.setContentType("application/pdf");
         byte[] bytes = new byte[]{37, 80, 68, 70};
 
-        new RabbitMqOcrPublisher(template, "paperless.ocr").publish(document, bytes);
+        new RabbitMqOcrPublisher(template, "paperless.ocr").publish(document);
 
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
         verify(operations).send(eq(""), eq("paperless.ocr"), captor.capture());
         Message message = captor.getValue();
-        assertThat(message.getBody()).isEqualTo(bytes);
-        assertThat(message.getMessageProperties().getContentType()).isEqualTo("application/pdf");
+        assertThat(new String(message.getBody(), java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(document.getId().toString());
+        assertThat(message.getBody()).isNotEqualTo(bytes);
+        assertThat(message.getMessageProperties().getHeaders()).containsEntry("schemaVersion", "1");
+        assertThat(message.getMessageProperties().getContentType()).isEqualTo("text/plain");
         assertThat(message.getMessageProperties().getHeaders())
                 .containsEntry("documentId", document.getId().toString())
-                .containsEntry("filename", "scan.pdf");
+                .containsEntry("filename", "scan.pdf")
+                .containsEntry("originalContentType", "application/pdf");
         assertThat(message.getMessageProperties().getDeliveryMode()).isEqualTo(MessageDeliveryMode.PERSISTENT);
         verify(operations).waitForConfirmsOrDie(5000);
     }

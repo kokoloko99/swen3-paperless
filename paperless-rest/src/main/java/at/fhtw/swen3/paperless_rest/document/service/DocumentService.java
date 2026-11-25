@@ -21,6 +21,7 @@ public class DocumentService {
     private final DocumentPersistence documentPersistence;
     private final DocumentValidator documentValidator;
     private final OcrPublisher ocrPublisher;
+    private final DocumentStorage documentStorage;
     private final Logger logger;
 
     // Löscht das Dokument und seine Kommentare gemeinsam in einer Transaktion.
@@ -30,7 +31,7 @@ public class DocumentService {
         logger.info("Document {} deletion requested, including its comments", id);
     }
 
-    // Prüft die Angaben, speichert die Metadaten und sendet den Dateiinhalt an die OCR-Queue.
+// Speichert das Original vor der Verarbeitung bzw. uebergibt nur die Dokumentreferenz an RabbitMQ.
     @Transactional
     public DocumentModel uploadDocument(DocumentModel document, byte[] content) {
         documentValidator.validate(document);
@@ -38,7 +39,8 @@ public class DocumentService {
         DocumentModel saved = documentPersistence.save(document);
         logger.debug("Document {} metadata saved in upload transaction; submitting for OCR", saved.getId());
         try {
-            ocrPublisher.publish(saved, content);
+            documentStorage.store(saved.getId().toString(), content, saved.getContentType());
+            ocrPublisher.publish(saved);
         } catch (OcrPublishException ex) {
             throw new OcrSubmissionException(ex);
         }

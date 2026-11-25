@@ -1,5 +1,9 @@
 # Sprint 4: Abgabepruefung am 25.11.2026
 
+> Historischer Bericht zum zuerst veroeffentlichten Vier-Punkte-Stand. Die spaeter
+> vorgelegten sieben Vorgaben werden im zusaetzlichen Pruefbericht zur getrennten
+> Worker-Pipeline bewertet; dieser Bericht allein weist sie nicht vollstaendig nach.
+
 ## Automatisierte lokale Pruefung
 
 Aus einem frischen Checkout mit dem lokalen Abgabestand ausgefuehrt:
