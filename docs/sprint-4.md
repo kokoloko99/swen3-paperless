@@ -1,5 +1,7 @@
 # Sprint 4: Workers, MinIO, OCR, Elasticsearch
 
+Abgabeversion: **v0.3.0**, Release-Vorbereitung am 25.11.2026.
+
 ## Ablauf
 
 Upload -> Metadaten in PostgreSQL -> persistente RabbitMQ-Nachricht ->
