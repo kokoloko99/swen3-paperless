@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+// Prüft den Persistenzadapter mit einem simulierten Repository und echtem Mapper.
 @ExtendWith(MockitoExtension.class)
 class DocumentPersistenceAdapterTest {
 
@@ -27,6 +28,15 @@ class DocumentPersistenceAdapterTest {
 
     private DocumentPersistenceAdapter adapter;
 
+    // Prüft, dass der Adapter den Löschauftrag an das Repository weitergibt.
+    @Test
+    void deleteDelegatesToRepository() {
+        UUID id = UUID.randomUUID();
+        adapter.deleteById(id);
+        org.mockito.Mockito.verify(documentRepository).deleteById(id);
+    }
+
+    // Erstellt den Adapter vor jedem Test ohne echte Datenbank.
     @BeforeEach
     void setUp() {
         adapter = new DocumentPersistenceAdapter(
@@ -35,6 +45,7 @@ class DocumentPersistenceAdapterTest {
                 LoggerFactory.getLogger(DocumentPersistenceAdapter.class));
     }
 
+    // Prüft die Umwandlung beim Speichern und die zurückgegebenen Daten.
     @Test
     void saveMapsModelToEntityAndBack() {
         UUID id = UUID.randomUUID();
@@ -52,6 +63,7 @@ class DocumentPersistenceAdapterTest {
         assertThat(saved.getFilename()).isEqualTo("a.pdf");
     }
 
+    // Prüft die Umwandlung eines gefundenen Datenbankeintrags in ein Modell.
     @Test
     void findByIdMapsEntityToModel() {
         UUID id = UUID.randomUUID();
@@ -63,6 +75,7 @@ class DocumentPersistenceAdapterTest {
         assertThat(adapter.findById(id)).get().extracting(DocumentModel::getFilename).isEqualTo("a.pdf");
     }
 
+    // Prüft die Übersetzung eines Datenbankfehlers und den Erhalt seiner Ursache.
     @Test
     void translatesDatabaseFailureAndPreservesCause() {
         var failure = new org.springframework.dao.DataAccessResourceFailureException("Database offline");
@@ -73,6 +86,7 @@ class DocumentPersistenceAdapterTest {
                 .hasCause(failure);
     }
 
+    // Prüft, dass die Existenzprüfung an das Repository weitergegeben wird.
     @Test
     void existsByIdDelegates() {
         UUID id = UUID.randomUUID();

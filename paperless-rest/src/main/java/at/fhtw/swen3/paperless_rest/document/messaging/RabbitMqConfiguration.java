@@ -5,10 +5,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+// Konfiguriert die eigene RabbitMQ-Queue für OCR-Aufträge.
 @Configuration
 public class RabbitMqConfiguration {
+    // Legt eine dauerhafte Queue an, die einen Neustart von RabbitMQ übersteht.
     @Bean
     public Queue ocrQueue(@Value("${paperless.ocr.queue}") String queueName) {
-        return new Queue(queueName, true);
+        return org.springframework.amqp.core.QueueBuilder.durable(queueName)
+                .deadLetterExchange("").deadLetterRoutingKey(queueName + ".dead").build();
     }
 }

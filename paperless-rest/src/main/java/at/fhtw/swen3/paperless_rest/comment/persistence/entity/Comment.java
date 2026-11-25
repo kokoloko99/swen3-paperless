@@ -10,12 +10,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+// Beschreibt, wie ein Kommentar in der Datenbank gespeichert wird.
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 public class Comment extends AuditableEntity {
 
+    // Mehrere Kommentare können zu demselben Dokument gehören.
     @ManyToOne
     @JoinColumn(name = "document_id", nullable = false)
     private Document document;

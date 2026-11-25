@@ -1,1 +1,2 @@
+// Legt den Namen des eigenständigen Worker-Projekts fest.
 rootProject.name = 'paperless-ocr-worker'

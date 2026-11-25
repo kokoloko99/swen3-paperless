@@ -1,3 +1,4 @@
+# Beschreibt die öffentlich dokumentierten Dokument-Endpunkte der REST-API.
 openapi: 3.0.3
 info:
   title: Paperless REST API
@@ -6,9 +7,11 @@ info:
   # URL versioning: the major version is part of the path (/api/v1)
 servers:
   - url: http://localhost:8080
+# Verlangt einen Bearer-Token für die beschriebenen Anfragen.
 security:
   - bearerAuth: []
 paths:
+  # Beschreibt den Upload einer Datei als Multipart-Anfrage.
   /api/v1/documents:
     post:
       summary: Upload a document
@@ -33,7 +36,27 @@ paths:
                 $ref: '#/components/schemas/Document'
         '400':
           description: Invalid request (e.g. missing file)
+  # Beschreibt das Lesen der Dokumentmetadaten über die Dokument-ID.
   /api/v1/documents/{id}:
+    delete:
+      summary: Delete a document and all its comments
+      operationId: deleteDocument
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Document and comments deleted (also returned if already absent)
+        '400':
+          description: Invalid document ID
+        '401':
+          description: Authentication required
+        '503':
+          description: Document storage unavailable
     get:
       summary: Get document metadata
       operationId: getDocument
@@ -59,6 +82,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  # Legt die Felder der zurückgegebenen Dokumentdaten fest.
   schemas:
     Document:
       type: object

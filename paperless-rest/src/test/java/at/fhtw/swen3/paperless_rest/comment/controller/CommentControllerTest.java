@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Prüft HTTP-Antworten mit einem simulierten Service und ohne echte Datenbank.
 @WebMvcTest(CommentController.class)
 @Import({CommentDtoMapperImpl.class, SecurityConfig.class, LoggingConfiguration.class})
 @WithMockUser
@@ -62,6 +63,7 @@ class CommentControllerTest {
         return comment;
     }
 
+    // Prüft Status 201 und die Antwortdaten nach dem Anlegen.
     @Test
     void addCommentReturnsCreated() throws Exception {
         when(commentService.addComment(any())).thenReturn(sampleComment());
@@ -75,6 +77,7 @@ class CommentControllerTest {
                 .andExpect(jsonPath("$.author").value("Alice"));
     }
 
+    // Prüft Status 400 bei ungültigen Kommentardaten.
     @Test
     void addCommentReturnsBadRequestWhenInvalid() throws Exception {
         when(commentService.addComment(any())).thenThrow(new InvalidCommentException("Comment text must not be blank"));
@@ -86,6 +89,7 @@ class CommentControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // Prüft Status 404 beim Anlegen für ein fehlendes Dokument.
     @Test
     void addCommentReturnsNotFoundWhenDocumentMissing() throws Exception {
         when(commentService.addComment(any())).thenThrow(new DocumentNotFoundException(DOCUMENT_ID));
@@ -97,6 +101,7 @@ class CommentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    // Prüft Status 200 und die zurückgegebene Kommentarliste.
     @Test
     void getCommentsReturnsList() throws Exception {
         when(commentService.getComments(eq(DOCUMENT_ID))).thenReturn(List.of(sampleComment()));
@@ -106,6 +111,7 @@ class CommentControllerTest {
                 .andExpect(jsonPath("$[0].author").value("Alice"));
     }
 
+    // Prüft Status 404 beim Lesen für ein fehlendes Dokument.
     @Test
     void getCommentsReturnsNotFoundWhenDocumentIsMissing() throws Exception {
         when(commentService.getComments(eq(DOCUMENT_ID))).thenThrow(new DocumentNotFoundException(DOCUMENT_ID));
@@ -114,12 +120,14 @@ class CommentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    // Prüft, dass ein Löschaufruf Status 204 zurückgibt.
     @Test
     void deleteCommentReturnsNoContent() throws Exception {
         mockMvc.perform(delete("/api/v1/documents/{documentId}/comments/{commentId}", DOCUMENT_ID, COMMENT_ID))
                 .andExpect(status().isNoContent());
     }
 
+    // Prüft Status 400, wenn die Kommentar-ID keine gültige UUID ist.
     @Test
     void deleteCommentReturnsBadRequestWhenIdIsInvalid() throws Exception {
         mockMvc.perform(delete("/api/v1/documents/{documentId}/comments/{commentId}", DOCUMENT_ID, "not-a-uuid"))

@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Prüft echte Datenbankzugriffe mit PostgreSQL in einem Testcontainer.
 @DataJpaTest
 @Testcontainers
 class CommentRepositoryTest {
@@ -31,6 +32,7 @@ class CommentRepositoryTest {
     @Autowired
     private DocumentRepository documentRepository;
 
+    // Speichert ein Dokument, dem die Testkommentare zugeordnet werden können.
     private Document persistDocument() {
         Document document = new Document();
         document.setFilename("HelloWorld.pdf");
@@ -40,6 +42,7 @@ class CommentRepositoryTest {
         return documentRepository.save(document);
     }
 
+    // Prüft, dass ein gespeicherter Kommentar über seine Dokument-ID gefunden wird.
     @Test
     void savesAndFindsCommentsByDocumentId() {
         Document document = persistDocument();
@@ -58,6 +61,7 @@ class CommentRepositoryTest {
         assertThat(found.get(0).getText()).isEqualTo("Looks good");
     }
 
+    // Prüft, dass ein Dokument ohne Kommentare eine leere Liste liefert.
     @Test
     void returnsEmptyListWhenDocumentHasNoComments() {
         Document document = persistDocument();
@@ -67,6 +71,7 @@ class CommentRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    // Prüft, dass ein gelöschter Kommentar nicht mehr gefunden wird.
     @Test
     void deletesComment() {
         Document document = persistDocument();

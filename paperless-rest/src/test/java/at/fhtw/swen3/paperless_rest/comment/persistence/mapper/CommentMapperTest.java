@@ -12,10 +12,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Prüft die Umwandlung zwischen Modell und Entity ohne Datenbank.
 class CommentMapperTest {
 
     private final CommentMapper mapper = Mappers.getMapper(CommentMapper.class);
 
+    // Prüft, dass alle Daten und die Dokument-ID in die Entity übernommen werden.
     @Test
     void mapsModelToDal() {
         UUID commentId = UUID.randomUUID();
@@ -37,6 +39,7 @@ class CommentMapperTest {
         assertThat(dal.getCreatedAt()).isEqualTo(Instant.parse("2026-01-01T10:00:00Z"));
     }
 
+    // Prüft, dass die Daten der Entity richtig im Modell ankommen.
     @Test
     void mapsDalToModel() {
         UUID commentId = UUID.randomUUID();

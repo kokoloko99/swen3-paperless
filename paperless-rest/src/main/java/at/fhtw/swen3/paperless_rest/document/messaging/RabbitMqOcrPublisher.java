@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// Sendet hochgeladene Dateien an RabbitMQ und wartet auf eine Versandbestätigung.
 @Component
 public class RabbitMqOcrPublisher implements OcrPublisher {
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqOcrPublisher.class);
@@ -24,6 +25,7 @@ public class RabbitMqOcrPublisher implements OcrPublisher {
         this.queueName = queueName;
     }
 
+    // Sendet die Datei mit Dokument-ID und Dateiname und wartet auf die Broker-Bestätigung.
     @Override
     public void publish(DocumentModel document, byte[] content) {
         MessageProperties properties = new MessageProperties();
@@ -38,7 +40,7 @@ public class RabbitMqOcrPublisher implements OcrPublisher {
                 document.getId(), queueName, content.length);
         try {
             rabbitTemplate.invoke(operations -> {
-                // The default exchange routes directly to the queue with this name.
+                // Der Standard-Exchange leitet die Nachricht an die Queue mit diesem Namen.
                 operations.send("", queueName, message);
                 operations.waitForConfirmsOrDie(5000);
                 return null;
@@ -46,7 +48,7 @@ public class RabbitMqOcrPublisher implements OcrPublisher {
             logger.info("RabbitMQ confirmed document {} in OCR queue {} ({} bytes)",
                     document.getId(), queueName, content.length);
         } catch (AmqpException ex) {
-            // The central exception handler logs the full cause once.
+            // Der zentrale Fehlerhandler protokolliert die vollständige Ursache.
             logger.warn("OCR publish failed for document {} in queue {}", document.getId(), queueName);
             throw new OcrMessagingException(ex);
         }

@@ -6,12 +6,14 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 
+// Prüft die Pflichtangaben eines hochgeladenen Dokuments.
 @Component
 @RequiredArgsConstructor
 public class DocumentValidator {
 
     private final Logger logger;
 
+    // Prüft, ob Dateiname und Dateityp vorhanden sind und die Datei nicht leer ist.
     public void validate(DocumentModel document) {
         if (document == null) {
             reject("Document must not be null");
@@ -27,6 +29,7 @@ public class DocumentValidator {
         }
     }
 
+    // Protokolliert die ungültige Angabe und wirft eine InvalidDocumentException.
     private void reject(String message) {
         logger.warn("Document validation failed: {}", message);
         throw new InvalidDocumentException(message);
