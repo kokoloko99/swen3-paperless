@@ -1,155 +1,101 @@
-# Sprint 4: alle sieben Anforderungen
+# Sprint 4: Workers, MinIO, OCR und ELK
 
-Abgabeversion: **v0.3.0**. Dieser Stand vervollstaendigt die zuerst veroeffentlichte
-Version auf ausdruecklichen Wunsch unter demselben Tag. Der vorherige Tag zeigte
-auf Commit `e8683a3fa015598e0982b85d255340202627323b`; dieser Commit bleibt in der Historie.
-Der neue Ziel-Commit wird nach bestandenen Pruefungen im GitHub Release ausgewiesen.
-
-## Anforderungen und Umsetzung
+## Anforderungen
 
 | Nr. | Vorgabe | Umsetzung |
 | --- | --- | --- |
-| 1 | Eigene Anwendungen fuer Worker | Zwei Spring-Boot-Anwendungen: paperless-ocr-worker und paperless-indexing-worker |
-| 2 | Tesseract und Ghostscript oder Alternative | Tesseract eng+deu; Poppler/pdftoppm rendert alle PDF-Seiten bei 200 DPI |
-| 3 | REST speichert PDF in MinIO | DocumentService speichert Originalbytes nach Metadatenvalidierung und vor Queue-Versand |
-| 4 | OCR laedt Original aus MinIO | Queue enthaelt UUID-Referenz; OCR-Worker laedt Original, erkennt Text und sendet Ergebnis |
-| 5 | Elasticsearch im Worker-Service | Offizieller Java-Client 9.4.1 im Indexing-Worker, per Dependency Injection |
-| 6 | Indexing-Worker speichert OCR-Text | Eigene Ergebnis-Queue und eigener Container; Indexierung nach Validierung und mit stabiler UUID |
-| 7 | MinIO, OCR und ELK in Docker | MinIO, beide Worker, Elasticsearch, Logstash und Kibana starten standardmaessig mit Compose |
+| 1 | Eigene Worker-Anwendungen | paperless-ocr-worker und paperless-indexing-worker als separate Spring-Boot-Anwendungen |
+| 2 | Tesseract und PDF-Konverter | Tesseract mit eng/deu; Poppler rendert PDF-Seiten bei 200 DPI |
+| 3 | REST speichert PDFs in MinIO | Speicherung im Upload-Service vor dem Queue-Versand |
+| 4 | OCR lädt Original aus MinIO | Referenznachricht lesen, Original laden, Text erkennen |
+| 5 | Elasticsearch im Worker | Offizieller Java-Client im Indexing-Worker, per Dependency Injection |
+| 6 | Eigener Indexing-Worker | OCR-Ergebnisse aus separater Queue in Elasticsearch speichern |
+| 7 | Container für MinIO, Worker und ELK | Alle Dienste einschließlich Logstash und Kibana in Docker Compose |
 
-```mermaid
-flowchart LR
-    UI --> REST
-    REST --> PostgreSQL
-    REST -->|Original speichern| MinIO
-    REST -->|UUID und Metadaten| OCRQueue[RabbitMQ: paperless.ocr.v5]
-    OCRQueue --> OCR[OCR-Worker]
-    MinIO -->|Original laden| OCR
-    OCR --> Tesseract[Tesseract und Poppler]
-    OCR -->|Text und Metadaten| IndexQueue[RabbitMQ: paperless.indexing.v1]
-    IndexQueue --> Indexer[Indexing-Worker]
-    Indexer --> Elasticsearch
-    REST --> Logs[ECS-Logdateien]
-    OCR --> Logs
-    Indexer --> Logs
-    Logs --> Logstash
-    Logstash --> Elasticsearch
-    Elasticsearch --> Kibana
+## Verarbeitung
+
+1. REST validiert den Upload und speichert die Metadaten in PostgreSQL.
+2. Das Original wird im MinIO-Bucket `documents` unter seiner Dokument-UUID gespeichert.
+3. Erst danach publiziert REST eine persistente Referenz nach `paperless.ocr.v5`.
+4. OCR lädt das Original aus MinIO. Poppler bereitet PDF-Seiten auf;
+   Tesseract erkennt den Text aller Seiten in der richtigen Reihenfolge.
+5. Der Text wird persistent nach `paperless.indexing.v1` publiziert.
+6. Der Indexing-Worker validiert das Ergebnis und schreibt es nach Elasticsearch.
+
+Die UUID dient auch als MinIO-Objektschlüssel und Elasticsearch-ID.
+Wiederholte Verarbeitung aktualisiert denselben Eintrag. Der OCR-Worker kennt
+Elasticsearch nicht; der Indexing-Worker benötigt weder MinIO noch Tesseract.
+
+## Nachrichtenverträge
+
+Beide Nachrichten verwenden UTF-8, AMQP-Content-Type `text/plain` und `schemaVersion=1`.
+Header: `documentId`, `filename`, `originalContentType`, `schemaVersion`.
+
+| Queue | Body |
+| --- | --- |
+| paperless.ocr.v5 | Kanonische Dokument-UUID; kein PDF-/Bildinhalt |
+| paperless.indexing.v1 | OCR-Text; darf bei leeren Seiten leer sein |
+
+Queues und Nachrichten sind dauerhaft. Der ursprüngliche MIME-Typ steht in
+`originalContentType`. Vor einem Upgrade müssen alte `paperless.ocr.v4`-Aufträge
+mit dem bisherigen Worker abgearbeitet werden; der neue Consumer erwartet Referenzen.
+
+## Elasticsearch
+
+Index: `paperless-documents`, angelegt beim ersten Ergebnis.
+
+| Feld | Typ | Zweck |
+| --- | --- | --- |
+| id | keyword | Exakte Dokumentzuordnung |
+| filename | text | Suche im Dateinamen |
+| contentType | keyword | Exakter Dateityp |
+| text | text | Volltextsuche im OCR-Ergebnis |
+
+Ergebnis nach dem Upload mit der Dokument-ID abrufen:
+
+```text
+http://localhost:9200/paperless-documents/_doc/DOKUMENT-ID
 ```
 
-## Nachrichtenvertraege
-
-Beide Nachrichten sind persistent, nutzen UTF-8 und `schemaVersion=1`.
-Nachrichtentypen besitzen getrennte Queues; es wird kein PDF-Binaerinhalt mehr transportiert.
-
-| Queue | Body | Header |
-| --- | --- | --- |
-| paperless.ocr.v5 | kanonische Dokument-UUID, zugleich MinIO-Objektschluessel | documentId, filename, originalContentType, schemaVersion |
-| paperless.indexing.v1 | erkannter OCR-Text; auch leer bei leeren Seiten erlaubt | documentId, filename, originalContentType, schemaVersion |
-
-AMQP Content-Type ist jeweils `text/plain`; der urspruengliche Dateityp steht im
-Header `originalContentType`. Der Bucket heisst `documents`. Die UUID dient in
-MinIO und Elasticsearch als stabiler Schluessel; wiederholte Verarbeitung ersetzt
-denselben Suchindex-Eintrag statt Duplikate anzulegen.
-
-Das Elasticsearch-Mapping definiert `id` und `contentType` als keyword, `filename`
-und `text` als text. Der Index `paperless-documents` wird beim ersten Ergebnis angelegt.
-Der OCR-Worker hat keine Elasticsearch-Abhaengigkeit; der Indexing-Worker benoetigt
-weder MinIO noch Tesseract. Dadurch laesst sich die Indexierung eigenstaendig wiederholen.
-
-## Start und Zugaenge
+Beispiel für eine Volltextsuche in PowerShell:
 
 ```powershell
-docker compose up -d --build
-docker compose ps
-docker compose logs --tail 30 rest ocr-worker indexing-worker logstash
+$body = '{"query":{"match":{"text":"Rechnung"}}}'
+Invoke-RestMethod -Method Post -ContentType application/json -Body $body `
+  http://localhost:9200/paperless-documents/_search
 ```
 
-| Dienst | Adresse | Demo-Zugang |
-| --- | --- | --- |
-| Weboberflaeche | http://localhost:8081 | user / user |
-| Keycloak | http://localhost:8082 | admin / admin |
-| REST | http://localhost:8080/api/v1/documents | Bearer-Token |
-| MinIO S3 / Console | http://localhost:9000 / http://localhost:9001 | paperless / paperless-secret |
-| RabbitMQ-Verwaltung | http://localhost:15672 | paperless / paperless |
-| Elasticsearch | http://localhost:9200 | lokale Uebung ohne Elastic-Authentifizierung |
-| Kibana | http://localhost:5601 | Elasticsearch-Daten erkunden |
-| Logstash API | http://localhost:9600 | Pipeline-Statistiken |
+## ELK
 
-MinIO-Zugang ist durch `MINIO_ROOT_USER` und `MINIO_ROOT_PASSWORD` ueberschreibbar.
-Das MinIO-Image stammt von einem per Digest fixierten Community-Mirror, da die
-bisherigen offiziellen Registry-Images beim ersten Aufbau nicht abrufbar waren.
-Elasticsearch, Logstash und Kibana verwenden gemeinsam 9.4.1.
+Elasticsearch, Logstash und Kibana verwenden Version 9.4.1. Spring Boot schreibt
+ECS-JSON-Logs für REST und beide Worker in das Volume `application-logs`.
+Logstash liest sie mit `logstash/pipeline/paperless.conf` und schreibt sie nach
+`paperless-logs-*`. Lesepositionen liegen im Volume `logstash-data`.
 
-## ELK-Logfluss
+In Kibana unter Discover eine Data View für `paperless-documents` ohne Zeitfeld
+oder für `paperless-logs-*` mit Zeitfeld `@timestamp` anlegen.
+MinIO verwendet einen per Digest fixierten Community-Mirror.
 
-Spring Boot schreibt strukturierte ECS-JSON-Logs fuer REST und beide Worker in das
-Volume `application-logs`. Logstash liest diese Dateien ueber die Pipeline
-`logstash/pipeline/paperless.conf`, merkt sich Lesepositionen im Volume `logstash-data`
-und schreibt Ereignisse nach `paperless-logs-*` in Elasticsearch. Der OCR-Suchindex
-bleibt `paperless-documents` und wird direkt durch den Java-Client geschrieben.
+## Fehlerbehandlung
 
-In Kibana unter Discover eine Data View fuer `paperless-documents` (ohne Zeitfeld)
-oder `paperless-logs-*` (Zeitfeld `@timestamp`) anlegen. Das Skript unten prueft auch,
-dass Logs zur Testdokument-ID von REST und beiden Workern im Logindex angekommen sind.
+- REST meldet MinIO-Ausfälle mit HTTP 503; keine OCR-Nachricht bei fehlgeschlagener Speicherung.
+- OCR bestätigt erst nach der Broker-Bestätigung des Ergebnisses.
+- Indexing bestätigt erst nach erfolgreicher Elasticsearch-Indexierung.
+- Beide Consumer halten höchstens eine unbestätigte Nachricht bereit und versuchen
+  Fehler maximal dreimal mit wachsender Wartezeit erneut.
+- Nicht verarbeitbare Nachrichten landen in `<queue>.dead`.
+- Ungültige Referenzen, Metadaten und fehlerhafter UTF-8-Ergebnistext werden abgelehnt.
+- OCR-Kommandos haben je zwei Minuten Zeitlimit; temporäre Dateien werden entfernt.
 
-## Tests
+## Prüfung
 
-```powershell
-.\paperless-rest\gradlew.bat -p paperless-rest clean check bootJar
-.\paperless-rest\gradlew.bat -p paperless-ocr-worker clean check bootJar
-.\paperless-rest\gradlew.bat -p paperless-indexing-worker clean check bootJar
-python -m pip install -r scripts/requirements-smoke.txt
-python scripts/smoke_pipeline.py
-```
+Automatisierte Tests prüfen Reihenfolge und Abbruch bei Fehlern, Nachrichteninhalt,
+MinIO-Zugriffe, OCR-Seitenreihenfolge, Mapping, stabile IDs und Timeouts.
+Alle Module erzwingen mindestens 71 % Zeilenabdeckung; Befehle und Berichtspfade
+stehen in der [README](../README.md).
 
-`check` erzwingt mindestens 71 % JaCoCo-Zeilenabdeckung je gesamtem Java-Modul.
-Alle drei Anwendungen werden in GitHub Actions geprueft. Test- und Coverage-Berichte
-liegen in den jeweiligen `build/reports`-Verzeichnissen und als CI-/Release-Artefakte.
-
-Der praktische Smoke-Test stoppt beide Worker, laedt eine zweiseitige PDF und ein PNG
-hoch und vergleicht die bereits durch REST gespeicherten MinIO-Originale bytegenau.
-Er prueft die Referenznachrichten, startet nur OCR und kontrolliert die wartenden
-Textergebnisse. Erst dann startet er den Indexing-Worker, prueft Volltextsuche,
-Kibana und den echten Logstash-Logfluss. Er entfernt nur seine eigenen Testdokumente
-und startet beide Worker abschliessend wieder. Bei einem Fehler bleiben die eigenen
-Testdaten fuer die Diagnose erhalten. Bereits wartende Arbeit muss vor dem Test
-abgearbeitet sein; das Skript prueft zu Beginn beide Queues.
-
-## Fehler und Upgrade
-
-- Beide Consumer bestaetigen erst nach ihrem erfolgreichen Verarbeitungsschritt.
-- OCR wartet vor dem ACK auf die RabbitMQ-Bestaetigung der Ergebnisnachricht.
-- Pro Consumer hoechstens eine unbestaetigte Nachricht; Fehler werden maximal dreimal
-  mit exponentieller Wartezeit versucht. Dead-Letter-Queues heissen jeweils `<queue>.dead`.
-- Ungueltige Referenzen, Metadaten und nicht dekodierbarer UTF-8-Ergebnistext werden abgelehnt.
-- Tesseract/Poppler haben je Kommando ein Zwei-Minuten-Limit; temporaere Dateien werden aufgeraeumt.
-- REST meldet MinIO-Ausfaelle mit HTTP 503 und sendet keinen OCR-Auftrag fuer fehlgeschlagene Speicherung.
-- Vor dem Upgrade alte `paperless.ocr.v4`-Auftraege mit dem alten Worker abarbeiten.
-  Der neue Vertrag benutzt bewusst `paperless.ocr.v5`; alte Nachrichten werden nicht umgedeutet.
-- PostgreSQL, MinIO, Elasticsearch, Logs und Logstash-Lesepositionen besitzen persistente
-  Volumes. `docker compose down -v` entfernt deren Daten.
-
-## Weiterhin offene Folgeaufgaben
-
-- #25: Dokumentloeschung entfernt Metadaten und Kommentare, aber nicht automatisch
-  das Original in MinIO oder den Elasticsearch-Eintrag; wartende Arbeit wird nicht storniert.
-- #26: Such-REST-API und Suchfeld in der bestehenden Oberflaeche fehlen noch.
-- Datenbank, MinIO und RabbitMQ bilden keine atomare Transaktion. Wenn Versand oder Commit
-  nach der Objektspeicherung fehlschlaegt, kann ein verwaistes Objekt zurueckbleiben.
-  Ein transaktionales Outbox-Verfahren ist noch nicht umgesetzt.
-- Die bestehenden Backend-Upload-Limits bleiben unveraendert. Bei sehr grossen oder
-  defekten PDFs ist das Zeitlimit pro Kommando keine Gesamtlaufzeit-/Speichergrenze.
-
-## Historische Nachweise
-
-Die frueheren Berichte `verification-2026-11-25.md` und die urspruenglichen vier
-Exercise-Issues beschreiben den zuerst geprueften Stand. Sie ersetzen nicht den
-Pruefbericht fuer diese anschliessend vorgelegte Sieben-Punkte-Liste.
-Aktueller Nachweis: [Pruefung aller sieben Vorgaben](verification-seven-requirements-2026-11-25.md).
-
-## Technische Referenzen
-
-- Spring Boot ECS-Dateilogs: https://docs.spring.io/spring-boot/reference/features/logging.html
-- Logstash file input: https://www.elastic.co/docs/reference/logstash/plugins/plugins-inputs-file
-- Elasticsearch Java-Client: https://www.elastic.co/docs/reference/elasticsearch/clients/java/setup/installation
+Für eine manuelle Prüfung OCR vor einem Upload stoppen: Das Original muss bereits
+in MinIO liegen und die OCR-Queue nur eine Referenz enthalten. Bei gestopptem
+Indexing-Worker müssen nach dem OCR-Start die Texte in der zweiten Queue warten.
+Erst der Start des Indexing-Workers erzeugt den Suchindex-Eintrag.
+Die Anwendungslogs lassen sich parallel in Kibana kontrollieren.

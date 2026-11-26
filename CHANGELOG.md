@@ -1,40 +1,17 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
-
 ## [Unreleased]
 
 ## [0.3.0] - 2026-11-25
 
-### Vervollstaendigung der sieben Vorgaben am 25.11.2026
-
-- REST speichert Originaldateien in MinIO, bevor der OCR-Auftrag publiziert wird.
-- Neue OCR-Referenzqueue `paperless.ocr.v5`; der OCR-Worker laedt Originale aus MinIO.
-- Eigenstaendige Anwendung `paperless-indexing-worker` und persistente Ergebnisqueue
-  `paperless.indexing.v1`; Elasticsearch-Client und Indexierung befinden sich dort.
-- Elasticsearch, Logstash und Kibana starten standardmaessig. Strukturierte ECS-Logs
-  von REST und beiden Workern werden durch Logstash nach Elasticsearch uebernommen.
-- Unit-Tests, Coverage-Grenzen und GitHub-CI fuer alle drei Java-Anwendungen.
-- Reproduzierbarer Smoke-Test mit einzeln gestoppten Workern sowie MinIO-/Queue-/ELK-Pruefung.
-- Auf ausdruecklichen Wunsch wird der bestehende Tag v0.3.0 auf diesen vervollstaendigten
-  Stand aktualisiert. Vorheriger Ziel-Commit: `e8683a3fa015598e0982b85d255340202627323b`.
-
-### Zuerst veroeffentlichter Stand
-
-Sprint 4; local implementation from 18.11.2026, published on 25.11.2026.
-
-- Elasticsearch 9.4.1, persistenter Index und optionales Kibana in Docker Compose.
-- MinIO-Originalspeicherung im OCR-Worker, eindeutige Objektschluessel pro UUID.
-- Echte Tesseract-OCR fuer Bilder und mehrseitige PDFs mit Poppler.
-- Indexierung ueber den offiziellen Elasticsearch-Java-Client mit explizitem Mapping.
-- Begrenzte Wiederholungen, Timeouts, Nachrichtenvalidierung und Dead-Letter-Queue.
-- Queue-Wechsel auf paperless.ocr.v4 ohne Aenderung der bisherigen Queue.
-- Unit-Tests fuer den Verarbeitungsablauf, Coverage-Grenze von 71 % in beiden Modulen.
-- GitHub-Actions-Pruefung fuer Worker und Backend mit Test- und Coverage-Artefakten.
-- Dokumentloeschung mit Kommentar-Cascade samt Tests und Frontend-Bedienung.
-- Release- und Build-Versionen auf 0.3.0 abgestimmt.
-- Aktueller Pruefnachweis: docs/verification-2026-11-25.md.
-- Abnahme und bekannte Grenzen in docs/sprint-4.md dokumentiert.
+- Originaldateien im REST-Server in MinIO speichern.
+- Separate OCR- und Indexing-Anwendungen mit persistenten RabbitMQ-Queues.
+- OCR mit Tesseract und Poppler für Bilder und mehrseitige PDFs.
+- Elasticsearch-Java-Client, explizites Mapping und stabile Dokument-IDs.
+- Elasticsearch, Logstash und Kibana in Docker Compose; strukturierte Anwendungslogs.
+- Begrenzte Retries, Dead-Letter-Queues und OCR-Timeouts.
+- Dokumentlöschung mit Kommentar-Cascade und Frontend-Bedienung.
+- Unit-/Integrationstests und CI mit mindestens 71 % Zeilenabdeckung je Java-Modul.
 
 ## [0.1.0] - 2026-10-21
 
@@ -47,9 +24,8 @@ Sprint 4; local implementation from 18.11.2026, published on 25.11.2026.
 - Web server sub-project `paperless-ui` (nginx, Dockerfile, `nginx.conf`) serving the simple web frontend (HTML5, CSS, JavaScript) from its content path `html/` at `http://localhost:8081/`; `/api/` is proxied to the REST server on port 8080. Added as service `ui` in `docker-compose.yml`.
 - Frontend features: upload documents, look up documents by ID, list/add/delete comments.
 - OpenAPI specification (`openapi.yaml`) for the "Document Upload" use case.
-- Test scripts for the document endpoints (`documents.http`, `documents-curl.txt`).
+- Test scripts for the document endpoints (`documents.http`).
 - JaCoCo test coverage report (XML and HTML).
-- Use-case concept for document comments (`docs/use-case-comments.md`).
 
 ### Changed
 - Project version in `build.gradle` set to `0.1.0` (matches this changelog and the git tag `v0.1.0`).
